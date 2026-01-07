@@ -18,7 +18,7 @@ typedef enum {
 typedef struct {
     token_type type;
     char* value;
-} token
+} token;
 
 
 #endif //LEXER_H

@@ -6,6 +6,5 @@
 #include "lexer.h"
 
 void lexer(){
-
-    return 0;
+    return;
 }
