@@ -3,48 +3,50 @@
 
 #include <stdio.h>
 
-typedef enum {
-    AST_COMMAND,      // ls -l
-    AST_PIPE,         // |
-    AST_AND,          // &&
-    AST_OR,           // ||
-    AST_REDIRECT,     // > < >>
-    AST_SUBSHELL      // ( ... )
+typedef enum
+{
+    AST_COMMAND, // ls -l
+    AST_PIPE, // |
+    AST_AND, // &&
+    AST_OR, // ||
+    AST_REDIRECT, // > < >>
+    AST_SUBSHELL // ( ... )
 } ASTNodeType;
 
-typedef struct ASTNode {
+typedef struct ASTNode
+{
     ASTNodeType type;
 
-    union {
-        /* Commande simple */
-        struct {
-            char **argv;        // {"ls", "-l", NULL}
+    union
+    {
+        struct
+        {
+            char **argv;
+            int len;
         } command;
 
-        /* Pipe / && / || */
-        struct {
+        struct
+        {
             struct ASTNode *left;
             struct ASTNode *right;
-        } binary;
+        } child;
 
-        /* Redirection */
-        struct {
+        struct
+        {
             struct ASTNode *cmd;
             char *filename;
-            int mode;           // >, >>, <
+            int mode;
         } redirect;
 
-        /* Subshell */
-        struct {
+        struct
+        {
             struct ASTNode *child;
         } subshell;
 
     } data;
-
 } ASTNode;
 
+ASTNode *new_node();
+void ast_pretty_print(ASTNode *node, int depth);
 
-
-
-
-#endif //AST_H
+#endif // AST_H

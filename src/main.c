@@ -2,60 +2,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <unistd.h>
 
+#include "include/ast/ast.h"
+#include "include/parser/parser.h"
 
-static void le_liseur_afficheur(FILE *input)
-{
+int main(int argc, char *argv[]) {
+  FILE *input = NULL;
+
+  if (argc >= 2 && strcmp(argv[1], "-c") == 0) {
+    if (argc < 3) {
+      fprintf(stderr, "42sh: option -c manque argument\n");
+      return 1;
+    }
+
+    input = fmemopen(argv[2], strlen(argv[2]), "r");
+    if (!input) {
+      perror("fmemopen");
+      return 1;
+    }
+  } else if (argc >= 2) {
+    input = fopen(argv[1], "r");
+    if (!input) {
+      perror(argv[1]);
+      return 1;
+    }
+  } else {
+    input = stdin;
+  }
+
+  if (input == stdin) {
     char *line = NULL;
     size_t len = 0;
 
-    while (getline(&line, &len, input) != -1){
-        printf("%s", line);
+    while (1) {
+
+      printf("42sh>");
+      fflush(stdout);
+
+      ssize_t r = getline(&line, &len, input);
+      if (r == -1)
+        break;
+
+      token *tokens = lexer(line);
+      if (!tokens)
+        goto error;
+
+      ASTNode *ast = parser(tokens);
+      if (!ast)
+        goto error;
+
+      ast_pretty_print(ast, 0);
+
+      /* executor(ast); */
     }
 
     free(line);
-}
-
-int main(int argc, char *argv[])
-{
-    FILE *input = NULL;
-
-    if (argc >= 2 && strcmp(argv[1], "-c") == 0)
-    {
-        if (argc < 3)
-        {
-            fprintf(stderr, "42sh: option -c manque qrgument\n");
-            return 1;
-        }
-
-        input = fmemopen(argv[2], strlen(argv[2]), "r");
-        if (!input)
-        {
-            perror("fmemopen");
-            return 1;
-        }
-    }
-    else if (argc >= 2)
-    {
-        input = fopen(argv[1], "r");
-        if (!input)
-        {
-            perror(argv[1]);
-            return 1;
-        }
-    }
-    else
-    {
-        input = stdin;
-    }
-
-    le_liseur_afficheur(input);
-
-    if (input != stdin){
-        fclose(input);
-        //pour fmemopen et fopen. pas besoin pour stdin c'est gere par le systeme
-    }
-
+    line = NULL;
     return 0;
+  } else {
+    printf("not supported\n");
+    return 0;
+  }
+
+  if (input != stdin) {
+    fclose(input);
+    // pour fmemopen et fopen. pas besoin pour stdin c'est gere par le systeme
+  }
+
+  return 0;
+
+error:
+  fprintf(stderr, "error \n");
+  return 1;
 }
