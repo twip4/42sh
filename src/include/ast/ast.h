@@ -1,5 +1,5 @@
-#ifndef AST.H
-#define AST.H
+#ifndef AST_H
+#define AST_H
 
 #include <stdio.h>
 
@@ -47,4 +47,4 @@ typedef struct ASTNode {
 
 
 
-#endif //AST.H
+#endif //AST_H
