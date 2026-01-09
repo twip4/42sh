@@ -39,6 +39,7 @@ token_type check_keyword(char *word);
 int add_token(token *head, token_type type, char *value);
 char *read_word(char *input, int *i);
 int handle_symbol(char *s, int *i, token *tokens);
+char *read_quoted(char *input, int *i);
 
 token *lexer(char *input_lx);
 
