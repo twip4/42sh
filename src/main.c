@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "include/ast/ast.h"
+#include "include/executor/executor.h"
 #include "include/parser/parser.h"
 
 int main(int argc, char *argv[]) {
@@ -53,6 +54,8 @@ int main(int argc, char *argv[]) {
         goto error;
 
       ast_pretty_print(ast, 0);
+
+      l_executeur_d_ast(ast);
 
       /* executor(ast); */
     }
