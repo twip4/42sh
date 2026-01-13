@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 
-typedef enum {
+typedef enum
+{
     TOK_IF,
     TOK_THEN,
     TOK_ELIF,
@@ -13,7 +14,7 @@ typedef enum {
     TOK_NEWLINE,
     TOK_APOSTROPHE,
     TOK_WORDS,
-    
+
     TOK_PIPE,
     TOK_OR,
     TOK_AMPERSAND,
@@ -24,10 +25,11 @@ typedef enum {
     TOK_HEREDOC,
 } token_type;
 
-typedef struct token_struct{
+typedef struct token_struct
+{
     token_type type;
-    char* value;
-    struct token_struct* next;
+    char *value;
+    struct token_struct *next;
 } token;
 
 token *token_init(void);
@@ -43,4 +45,4 @@ char *read_quoted(char *input, int *i);
 
 token *lexer(char *input_lx);
 
-#endif //LEXER_H
+#endif // LEXER_H

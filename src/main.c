@@ -10,6 +10,7 @@
 
 int main(int argc, char *argv[]) {
   FILE *input = NULL;
+  int tty;
 
   if (argc >= 2 && strcmp(argv[1], "-c") == 0) {
     if (argc < 3) {
@@ -32,15 +33,17 @@ int main(int argc, char *argv[]) {
     input = stdin;
   }
 
+  tty = isatty(fileno(input));
+
+  char *line = NULL;
+  size_t len = 0;
+
   if (input == stdin) {
-    char *line = NULL;
-    size_t len = 0;
-
     while (1) {
-
-      printf("42sh>");
-      fflush(stdout);
-
+      if (tty) {
+        printf("42sh>");
+        fflush(stdout);
+      }
       ssize_t r = getline(&line, &len, input);
       if (r == -1)
         break;
@@ -56,21 +59,32 @@ int main(int argc, char *argv[]) {
       ast_pretty_print(ast, 0);
 
       l_executeur_d_ast(ast);
-
-      /* executor(ast); */
     }
 
     free(line);
     line = NULL;
-    return 0;
   } else {
-    printf("not supported\n");
-    return 0;
+    ssize_t r = getline(&line, &len, input);
+    if (r == -1)
+      goto error;
+
+    token *tokens = lexer(line);
+    if (!tokens)
+      goto error;
+
+    ASTNode *ast = parser(tokens);
+    if (!ast)
+      goto error;
+
+    ast_pretty_print(ast, 0);
+
+    l_executeur_d_ast(ast);
   }
 
   if (input != stdin) {
     fclose(input);
-    // pour fmemopen et fopen. pas besoin pour stdin c'est gere par le systeme
+    // pour fmemopen et fopen. pas besoin pour stdin c'est gere par le
+    // systeme
   }
 
   return 0;
