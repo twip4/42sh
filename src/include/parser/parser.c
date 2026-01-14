@@ -105,22 +105,50 @@ ASTNode *parser_subshell(token **current)
     return parser_command(current);
 }
 
+// ASTNode *parser_command(token **current)
+// {
+//     ASTNode *node = new_node();
+//     node->type = AST_COMMAND;
+//     node->data.command.argv = malloc(sizeof(void *));
+//     node->data.command.len = 1;
+
+//     while (*current && (*current)->type == TOK_WORDS)
+//     {
+//         node->data.command.argv = realloc(
+//             node->data.command.argv, node->data.command.len * sizeof(void *));
+//         node->data.command.argv[node->data.command.len++ - 1] =
+//             (*current)->value;
+
+//         *current = (*current)->next;
+//     }
+
+//     return node;
+// }
+
+
 ASTNode *parser_command(token **current)
 {
     ASTNode *node = new_node();
     node->type = AST_COMMAND;
-    node->data.command.argv = malloc(sizeof(void *));
-    node->data.command.len = 1;
+
+    size_t argc = 0;
+    node->data.command.argv = NULL;
 
     while (*current && (*current)->type == TOK_WORDS)
     {
-        node->data.command.argv = realloc(
-            node->data.command.argv, node->data.command.len * sizeof(void *));
-        node->data.command.argv[node->data.command.len++ - 1] =
-            (*current)->value;
+        node->data.command.argv =
+            realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
+        node->data.command.argv[argc++] = (*current)->value;
 
         *current = (*current)->next;
     }
+
+    // tu mets pas de null a la fin gros con, ya que des segmentations fault
+    node->data.command.argv =
+        realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
+    node->data.command.argv[argc] = NULL;
+
+    node->data.command.len = argc;
 
     return node;
 }

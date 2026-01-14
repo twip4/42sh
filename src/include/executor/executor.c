@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "../ast/ast.h"
+#include "../builtins/builtins.h"
 
 static int executeur_de_commande(ASTNode *node);
 static int executeur_de_pipe(ASTNode *node);
@@ -43,6 +44,10 @@ int l_executeur_d_ast(ASTNode *node)
 
 static int executeur_de_commande(ASTNode *node)
 {
+
+    int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
+    if(builtin_fait_maison != -1) return builtin_fait_maison;
+
     pid_t pid = fork();
 
     if (pid == 0)
@@ -113,8 +118,18 @@ static int executeur_de_OR(ASTNode *node)
 
 static int executeur_de_redirect(ASTNode *node)
 {
+    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd) return 1;
+
     (void)node;
     fprintf(stderr, "REDIRECT: PAS FAIT !!!!\n");
+
+    // Ouvrir le fichier cible (open)
+
+    // Remplacer le descripteur standard (STDOUT_FILENO ou STDIN_FILENO) avec dup2
+
+    // Fermer le fichier ouvert (le fd original)
+
+    // Lancer la commande (builtin ou execvp)
     return 1;
 }
 
