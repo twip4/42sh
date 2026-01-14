@@ -149,6 +149,12 @@ token_type check_keyword(char *word)
         return TOK_ELSE;
     if (strcmp(word, "fi") == 0)
         return TOK_FI;
+    if (strcmp(word, "while") == 0)
+        return TOK_WHILE;
+    if (strcmp(word, "do") == 0)
+        return TOK_DO;
+    if (strcmp(word, "done") == 0)
+        return TOK_DONE;
     return TOK_WORDS;
 }
 
