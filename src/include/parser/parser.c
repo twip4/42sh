@@ -47,12 +47,12 @@ ASTNode *parser_pipe(token **current)
 
         ASTNode *right = parser_redirect(current);
 
-        ASTNode *pipe = new_node();
-        pipe->type = AST_PIPE;
-        pipe->data.child.left = left;
-        pipe->data.child.right = right;
+        ASTNode *node = new_node();
+        node->type = AST_PIPE;
+        node->data.child.left = left;
+        node->data.child.right = right;
 
-        left = pipe;
+        left = node;
     }
     return left;
 }
@@ -86,7 +86,7 @@ ASTNode *parser_redirect(token **current)
 
 ASTNode *parser_subshell(token **current)
 {
-    if ((*current)->type == TOK_AMPERSAND)
+    if ((*current)->type == TOK_PARO)
     {
         *current = (*current)->next;
 
@@ -95,7 +95,7 @@ ASTNode *parser_subshell(token **current)
         node->type = AST_SUBSHELL;
         node->data.subshell.child = parser_logique(current);
 
-        if ((*current)->type != TOK_AMPERSAND)
+        if ((*current)->type != TOK_PARC)
             printf("error not close parenthese\n");
 
         *current = (*current)->next;

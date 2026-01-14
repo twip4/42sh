@@ -52,6 +52,9 @@ void ast_pretty_print(ASTNode *node, int depth)
     case AST_REDIRECT:
         printf("REDIR\n");
         break;
+    case AST_SUBSHELL:
+        printf("AST_SUBSHELL\n");
+        break;
 
     default:
         printf("UNKNOWN\n");
