@@ -68,21 +68,41 @@ int add_token(token *head, token_type type, char *value)
 
 char *read_word(char *input, int *i)
 {
-    int start = *i;
     int len = 0;
     char *word;
-
-    while (input[*i] && !isspace(input[*i]) && !strchr("|&;<>\"\'", input[*i]))
+    int j = *i;
+    while (input[j] && !isspace(input[j]) && !strchr("|&;<>\"\'()", input[j]))
     {
-        (*i)++;
-        len++;
+        if (input[j] == '\\' && input[j + 1])
+        {
+            j += 2;
+            len++;
+        }
+        else
+        {
+            j++;
+            len++;
+        }
     }
-
     word = malloc(len + 1);
     if (!word)
         return NULL;
-    strncpy(word, input + start, len);
-    word[len] = '\0';
+    int k = 0;
+    while (*i < j)
+    {
+        if (input[*i] == '\\' && input[*i + 1])
+        {
+            (*i)++;
+            word[k++] = input[*i];
+            (*i)++;
+        }
+        else
+        {
+            word[k++] = input[*i];
+            (*i)++;
+        }
+    }
+    word[k] = '\0';
     return word;
 }
 
@@ -104,6 +124,37 @@ int handle_symbol(char *s, int *i, token *tokens)
         return (*i += 2, add_token(tokens, TOK_HEREDOC, NULL));
     if (s[*i] == '<')
         return (*i += 1, add_token(tokens, TOK_REDIR_IN, NULL));
+    if (s[*i] == '(')
+        return (*i += 1, add_token(tokens, TOK_PARO, NULL));
+    if (s[*i] == ')')
+        return (*i += 1, add_token(tokens, TOK_PARC, NULL));
+    return 0;
+}
+
+int handle_escape(char *s, int *i, token *tokens)
+{
+    char *word;
+
+    if (s[*i] != '\\' || !s[*i + 1])
+        return 0;
+
+    word = malloc(2);
+    if (!word)
+        return 0;
+
+    word[0] = s[*i + 1];
+    word[1] = '\0';
+    add_token(tokens, TOK_WORDS, word);
+    *i += 2;
+    return 1;
+}
+
+int handle_simple_token(char c, int *i, token *tokens)
+{
+    if (c == ';')
+        return add_token(tokens, TOK_POINT_VIRGULE, NULL), (*i)++, 1;
+    if (c == '\n')
+        return add_token(tokens, TOK_NEWLINE, NULL), (*i)++, 1;
     return 0;
 }
 
@@ -158,38 +209,36 @@ token_type check_keyword(char *word)
     return TOK_WORDS;
 }
 
-token *lexer(char *input_lx)
+token *lexer(char *input)
 {
     int i = 0;
     token *tokens = token_init();
+
     if (!tokens)
         return NULL;
 
-    while (input_lx[i])
+    while (input[i])
     {
-        if (isspace(input_lx[i]))
+        if (isspace(input[i]))
             i++;
-        else if (handle_symbol(input_lx, &i, tokens))
+        else if (handle_escape(input, &i, tokens))
             continue;
-        else if (input_lx[i] == ';')
-            add_token(tokens, TOK_POINT_VIRGULE, NULL), i++;
-        else if (input_lx[i] == '\n')
-            add_token(tokens, TOK_NEWLINE, NULL), i++;
-        else if (input_lx[i] == '\'' || input_lx[i] == '"')
+        else if (handle_symbol(input, &i, tokens))
+            continue;
+        else if (handle_simple_token(input[i], &i, tokens))
+            continue;
+        else if (input[i] == '\'' || input[i] == '"')
         {
-            char *word = read_quoted(input_lx, &i);
+            char *word = read_quoted(input, &i);
             if (!word)
-            {
-                token_free_all(tokens);
-                return NULL; // erreur quote non fermee
-            }
+                return token_free_all(tokens), NULL;
             add_token(tokens, TOK_WORDS, word);
         }
         else
         {
-            char *word = read_word(input_lx, &i);
+            char *word = read_word(input, &i);
             if (!word)
-                return NULL;
+                return token_free_all(tokens), NULL;
             add_token(tokens, check_keyword(word), word);
         }
     }
