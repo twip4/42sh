@@ -35,7 +35,7 @@ typedef struct ASTNode
         {
             struct ASTNode *cmd;
             char *filename;
-            int mode;
+            int mode;// < = 0, > = 1 , >> = 2
         } redirect;
 
         struct
