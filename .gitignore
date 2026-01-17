@@ -1,48 +1,31 @@
-# Prerequisites
 *.d
-
-# Object files
 *.o
 *.ko
 *.obj
 *.elf
-
-# Linker output
 *.ilk
 *.map
 *.exp
-
-# Precompiled Headers
 *.gch
 *.pch
-
-# Libraries
 *.lib
 *.a
 *.la
 *.lo
-
-# Shared objects (inc. Windows DLLs)
 *.dll
 *.so
 *.so.*
 *.dylib
-
-# Executables
 *.exe
 *.out
 *.app
 *.i*86
 *.x86_64
 *.hex
-
-# Debug files
 *.dSYM/
 *.su
 *.idb
 *.pdb
-
-# Kernel Module Compile Results
 *.mod*
 *.cmd
 .tmp_versions/
@@ -50,6 +33,52 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-
-# debug information files
 *.dwo
+autom4te.cache/
+aclocal.m4
+configure
+config.status
+config.log
+config.h
+config.h.in~
+stamp-h1
+libtool
+ltmain.sh
+missing
+install-sh
+depcomp
+*.dirstamp
+compile
+configure~
+script.sh
+src/42sh
+test-driver
+Makefile
+Makefile.in
+*.o
+*.lo
+*.la
+*.a
+*.so
+*.dll
+*.exe
+*.out
+*.d
+*.swp
+.libs/
+.deps/
+.clang-format
+build/
+_build/
+dist/
+distdir/
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+*.log
+*.tmp
+*.bak
+.vscode/
+.idea/
+.DS_Store
