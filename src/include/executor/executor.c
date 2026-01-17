@@ -120,17 +120,62 @@ static int executeur_de_redirect(ASTNode *node)
 {
     if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd) return 1;
 
-    (void)node;
-    fprintf(stderr, "REDIRECT: PAS FAIT !!!!\n");
+    int fd;
+    int saved_stdin = -1;
+    int saved_stdout = -1;
 
-    // Ouvrir le fichier cible (open)
+    if (node->data.redirect.mode == 0) // <
+    {
+        fd = open(node->data.redirect.filename, O_RDONLY);
+        if (fd < 0)
+        {
+            perror("open input");
+            return 1;
+        }
+        saved_stdin = dup(STDIN_FILENO);
+        dup2(fd, STDIN_FILENO);
+        close(fd);
+    }
+    else if (node->data.redirect.mode == 1) // >
+    {
+        fd = open(node->data.redirect.filename,
+                  O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0)
+        {
+            perror("open output");
+            return 1;
+        }
+        saved_stdout = dup(STDOUT_FILENO);
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+    }
+     else if (node->data.redirect.mode == 2) // >>
+    {
+        fd = open(node->data.redirect.filename,
+                  O_WRONLY | O_CREAT | O_APPEND, 0644);
+        if (fd < 0)
+        {
+            perror("open append");
+            return 1;
+        }
+        saved_stdout = dup(STDOUT_FILENO);
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+    }
 
-    // Remplacer le descripteur standard (STDOUT_FILENO ou STDIN_FILENO) avec dup2
+    int status = l_executeur_d_ast(node->data.redirect.cmd);
 
-    // Fermer le fichier ouvert (le fd original)
-
-    // Lancer la commande (builtin ou execvp)
-    return 1;
+    if (saved_stdin != -1)
+    {
+        dup2(saved_stdin, STDIN_FILENO);
+        close(saved_stdin);
+    }
+    if (saved_stdout != -1)
+    {
+        dup2(saved_stdout, STDOUT_FILENO);
+        close(saved_stdout);
+    }
+    return status;
 }
 
 static int executeur_de_subshell(ASTNode *node)
