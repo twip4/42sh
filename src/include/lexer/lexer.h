@@ -48,8 +48,8 @@ char *read_word(char *input, int *i);
 int handle_symbol(char *s, int *i, token *tokens);
 int handle_simple_token(char c, int *i, token *tokens);
 int handle_escape(char *s, int *i, token *tokens);
+int skip_comment(char *s, int *i, int *simple_quote, int *double_quote);
 char *read_quoted(char *input, int *i);
-
 token *lexer(char *input_lx);
 
 #endif // LEXER_H

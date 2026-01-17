@@ -188,6 +188,23 @@ char *read_quoted(char *input, int *i)
     return word;
 }
 
+int skip_comment(char *s, int *i, int *simple_quote, int *double_quote)
+{
+    if (s[*i] == '\'' && !*double_quote)
+        *simple_quote = !*simple_quote;
+    else if (s[*i] == '"' && !*simple_quote)
+        *double_quote = !*double_quote;
+
+    if (!*simple_quote && !*double_quote && s[*i] == '#'
+        && (*i == 0 || isspace(s[*i - 1])))
+    {
+        while (s[*i] && s[*i] != '\n')
+            (*i)++;
+        return 1;
+    }
+    return 0;
+}
+
 token_type check_keyword(char *word)
 {
     if (strcmp(word, "if") == 0)
@@ -211,15 +228,18 @@ token_type check_keyword(char *word)
 
 token *lexer(char *input)
 {
+    int simple_quote = 0;
+    int double_quote = 0;
     int i = 0;
     token *tokens = token_init();
-
     if (!tokens)
         return NULL;
 
     while (input[i])
     {
-        if (isspace(input[i]))
+        if (skip_comment(input, &i, &simple_quote, &double_quote))
+            continue;
+        else if (isspace(input[i]))
             i++;
         else if (handle_escape(input, &i, tokens))
             continue;
