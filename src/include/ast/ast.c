@@ -83,7 +83,7 @@ void ast_pretty_print(ASTNode *node, int depth)
     case AST_REDIRECT:
         printf("REDIR\n");
         break;
-        
+
     case AST_SUBSHELL:
         printf("AST_SUBSHELL\n");
         break;
@@ -109,9 +109,30 @@ void ast_pretty_print(ASTNode *node, int depth)
       printf("FI\n");
       break;
 
-    default:
-        printf("UNKNOWN\n");
+  case AST_IF:
+    printf("IF\n");
+    IfBranch *branch = node->data.ifnode.branches;
+    while (branch) {
+      print_indent(depth + 1);
+      printf("CONDITION:\n");
+      ast_pretty_print(branch->condition, depth + 2);
+      print_indent(depth + 1);
+      printf("THEN:\n");
+      ast_pretty_print(branch->bloc, depth + 2);
+      branch = branch->next;
     }
+    if (node->data.ifnode.blocelse) {
+      print_indent(depth + 1);
+      printf("ELSE:\n");
+      ast_pretty_print(node->data.ifnode.blocelse, depth + 2);
+    }
+    print_indent(depth);
+    printf("FI\n");
+    break;
+
+  default:
+    printf("UNKNOWN\n");
+  }
 
   if (node->type == AST_PIPE || node->type == AST_AND || node->type == AST_OR) {
     if (node->data.child.left)
