@@ -35,7 +35,7 @@ typedef struct ASTNode
         {
             struct ASTNode *cmd;
             char *filename;
-            int mode;// < = 0, > = 1 , >> = 2
+            int mode; // < = 0, > = 1 , >> = 2
         } redirect;
 
         struct
@@ -48,5 +48,6 @@ typedef struct ASTNode
 
 ASTNode *new_node();
 void ast_pretty_print(ASTNode *node, int depth);
+void free_ast(ASTNode *node);
 
 #endif // AST_H

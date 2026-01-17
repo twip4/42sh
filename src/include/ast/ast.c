@@ -9,6 +9,37 @@ ASTNode *new_node()
     return new;
 }
 
+void free_ast(ASTNode *node)
+{
+    if (!node)
+        return;
+
+    switch (node->type)
+    {
+    case AST_COMMAND:
+        free(node->data.command.argv);
+        break;
+
+    case AST_PIPE:
+    case AST_AND:
+    case AST_OR:
+        free_ast(node->data.child.left);
+        free_ast(node->data.child.right);
+        break;
+
+    case AST_REDIRECT:
+        free_ast(node->data.redirect.cmd);
+        free(node->data.redirect.filename);
+        break;
+
+    case AST_SUBSHELL:
+        free_ast(node->data.subshell.child);
+        break;
+    }
+
+    free(node);
+}
+
 static void print_indent(int depth)
 {
     for (int i = 0; i < depth; i++)

@@ -1,95 +1,124 @@
+#include "include/lexer/lexer.h"
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "42sh.h"
 #include "include/ast/ast.h"
 #include "include/executor/executor.h"
+#include "include/expand/expand.h"
 #include "include/parser/parser.h"
 
-int main(int argc, char *argv[]) {
-  FILE *input = NULL;
-  int tty;
+int last_return_code = 0;
 
-  if (argc >= 2 && strcmp(argv[1], "-c") == 0) {
-    if (argc < 3) {
-      fprintf(stderr, "42sh: option -c manque argument\n");
-      return 1;
+int main(int argc, char *argv[])
+{
+    FILE *input = NULL;
+    int tty;
+
+    if (argc >= 2 && strcmp(argv[1], "-c") == 0)
+    {
+        if (argc < 3)
+        {
+            fprintf(stderr, "42sh: option -c manque argument\n");
+            return 1;
+        }
+
+        input = fmemopen(argv[2], strlen(argv[2]), "r");
+        if (!input)
+        {
+            perror("fmemopen");
+            return 1;
+        }
+    }
+    else if (argc >= 2)
+    {
+        input = fopen(argv[1], "r");
+        if (!input)
+        {
+            perror(argv[1]);
+            return 1;
+        }
+    }
+    else
+    {
+        input = stdin;
     }
 
-    input = fmemopen(argv[2], strlen(argv[2]), "r");
-    if (!input) {
-      perror("fmemopen");
-      return 1;
+    tty = isatty(fileno(input));
+
+    char *line = NULL;
+    size_t len = 0;
+
+    if (input == stdin)
+    {
+        while (1)
+        {
+            if (tty)
+            {
+                printf("42sh>");
+                fflush(stdout);
+            }
+            ssize_t r = getline(&line, &len, input);
+            if (r == -1)
+                break;
+
+            token *tokens = lexer(line);
+            if (!tokens)
+                goto error;
+
+            ASTNode *ast = parser(tokens);
+            if (!ast)
+                goto error;
+
+            if (!expand_ast(ast))
+                goto error;
+
+            // ast_pretty_print(ast, 0);
+
+            last_return_code = l_executeur_d_ast(ast);
+
+            token_free_all(tokens);
+            free_ast(ast);
+        }
+
+        free(line);
+        line = NULL;
     }
-  } else if (argc >= 2) {
-    input = fopen(argv[1], "r");
-    if (!input) {
-      perror(argv[1]);
-      return 1;
-    }
-  } else {
-    input = stdin;
-  }
+    else
+    {
+        ssize_t r = getline(&line, &len, input);
+        if (r == -1)
+            goto error;
 
-  tty = isatty(fileno(input));
+        token *tokens = lexer(line);
+        if (!tokens)
+            goto error;
 
-  char *line = NULL;
-  size_t len = 0;
+        ASTNode *ast = parser(tokens);
+        if (!ast)
+            goto error;
 
-  if (input == stdin) {
-    while (1) {
-      if (tty) {
-        printf("42sh>");
-        fflush(stdout);
-      }
-      ssize_t r = getline(&line, &len, input);
-      if (r == -1)
-        break;
+        ast_pretty_print(ast, 0);
 
-      token *tokens = lexer(line);
-      if (!tokens)
-        goto error;
+        last_return_code = l_executeur_d_ast(ast);
 
-      ASTNode *ast = parser(tokens);
-      if (!ast)
-        goto error;
-
-      ast_pretty_print(ast, 0);
-
-      l_executeur_d_ast(ast);
+        token_free_all(tokens);
+        free_ast(ast);
     }
 
-    free(line);
-    line = NULL;
-  } else {
-    ssize_t r = getline(&line, &len, input);
-    if (r == -1)
-      goto error;
+    if (input != stdin)
+    {
+        fclose(input);
+        // pour fmemopen et fopen. pas besoin pour stdin c'est gere par le
+        // systeme
+    }
 
-    token *tokens = lexer(line);
-    if (!tokens)
-      goto error;
-
-    ASTNode *ast = parser(tokens);
-    if (!ast)
-      goto error;
-
-    ast_pretty_print(ast, 0);
-
-    l_executeur_d_ast(ast);
-  }
-
-  if (input != stdin) {
-    fclose(input);
-    // pour fmemopen et fopen. pas besoin pour stdin c'est gere par le
-    // systeme
-  }
-
-  return 0;
+    return 0;
 
 error:
-  fprintf(stderr, "error \n");
-  return 1;
+    fprintf(stderr, "error \n");
+    return 1;
 }
