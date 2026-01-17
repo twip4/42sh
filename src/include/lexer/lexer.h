@@ -26,6 +26,9 @@ typedef enum
     TOK_REDIR_OUT,
     TOK_APPEND,
     TOK_HEREDOC,
+    TOK_DUP_OUT,
+    TOK_DUP_IN,
+    TOK_READ_WRITE,
     TOK_PARO,
     TOK_PARC,
 } token_type;

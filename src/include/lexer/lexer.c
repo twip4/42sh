@@ -118,10 +118,16 @@ int handle_symbol(char *s, int *i, token *tokens)
         return (*i += 1, add_token(tokens, TOK_AMPERSAND, NULL));
     if (s[*i] == '>' && s[*i + 1] == '>')
         return (*i += 2, add_token(tokens, TOK_APPEND, NULL));
+    if (s[*i] == '>' && s[*i + 1] == '&')
+      return (*i += 2, add_token(tokens, TOK_DUP_OUT, NULL));
     if (s[*i] == '>')
         return (*i += 1, add_token(tokens, TOK_REDIR_OUT, NULL));
     if (s[*i] == '<' && s[*i + 1] == '<')
         return (*i += 2, add_token(tokens, TOK_HEREDOC, NULL));
+    if (s[*i] == '<' && s[*i + 1] == '>')
+        return (*i += 2, add_token(tokens, TOK_READ_WRITE, NULL));
+    if (s[*i] == '<' && s[*i + 1] == '&')
+        return (*i += 2, add_token(tokens, TOK_DUP_IN, NULL));
     if (s[*i] == '<')
         return (*i += 1, add_token(tokens, TOK_REDIR_IN, NULL));
     if (s[*i] == '(')
