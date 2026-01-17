@@ -122,108 +122,104 @@ static int executeur_de_OR(ASTNode *node)
     return status;
 }
 
-static int executeur_de_redirect(ASTNode *node)
+
+static int redirect_input(const char *filename, int *saved_fd)
 {
-    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
-        return 1;
-
-    int fd;
-    int saved_stdin = -1;
-    int saved_stdout = -1;
-
-    switch (node->data.redirect.mode)
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0)
     {
-    case TOK_REDIR_IN: // <
-        fd = open(node->data.redirect.filename, O_RDONLY);
-        if (fd < 0)
-        {
-            perror("open input");
-            return 1;
-        }
-        saved_stdin = dup(STDIN_FILENO);
-        dup2(fd, STDIN_FILENO);
-        close(fd);
-        break;
-
-    case TOK_REDIR_OUT: // >
-        fd = open(node->data.redirect.filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        if (fd < 0)
-        {
-            perror("open output");
-            return 1;
-        }
-        saved_stdout = dup(STDOUT_FILENO);
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-        break;
-
-    case TOK_APPEND: // >>
-        fd = open(node->data.redirect.filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
-        if (fd < 0)
-        {
-            perror("open append");
-            return 1;
-        }
-        saved_stdout = dup(STDOUT_FILENO);
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-        break;
-
-    case TOK_REDIR_PIPE:
-        int pipefd[2];
-        if (pipe(pipefd) == -1)
-        {
-            perror("pipe");
-            return 1;
-        }
-
-        ssize_t written = write(pipefd[1], node->data.redirect.filename, strlen(node->data.redirect.filename));
-        if (written == -1)
-        {
-            perror("write");
-            close(pipefd[0]);
-            close(pipefd[1]);
-            return 1;
-        }
-        close(pipefd[1]);
-
-        saved_stdin = dup(STDIN_FILENO);
-        dup2(pipefd[0], STDIN_FILENO);
-        close(pipefd[0]);
-        break;
-
-    case TOK_DUP_OUT: // >&
-        int target_fd = atoi(node->data.redirect.filename);
-        saved_stdout = dup(STDOUT_FILENO);
-        dup2(target_fd, STDOUT_FILENO);
-        break;
-
-    case TOK_DUP_IN: // <&
-        int source_fd = atoi(node->data.redirect.filename);
-        saved_stdin = dup(STDIN_FILENO);
-        dup2(source_fd, STDIN_FILENO);
-        break;
-
-    case TOK_READ_WRITE: // <>
-        fd = open(node->data.redirect.filename, O_RDWR | O_CREAT, 0644);
-        if (fd < 0)
-        {
-            perror("open read-write");
-            return 1;
-        }
-        saved_stdin = dup(STDIN_FILENO);
-        dup2(fd, STDIN_FILENO);
-        close(fd);
-        break;
-
-    default:
-        fprintf(stderr, "Redirection existe pas\n");
-            return 1;
+        perror("open input");
+        return 1;
     }
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(fd, STDIN_FILENO);
+    close(fd);
+    return 0;
+}
 
+static int redirect_output(const char *filename, int *saved_fd)
+{
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0)
+    {
+        perror("open output");
+        return 1;
+    }
+    *saved_fd = dup(STDOUT_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+    return 0;
+}
 
-    int status = l_executeur_d_ast(node->data.redirect.cmd);
+static int redirect_append(const char *filename, int *saved_fd)
+{
+    int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd < 0)
+    {
+        perror("open append");
+        return 1;
+    }
+    *saved_fd = dup(STDOUT_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+    return 0;
+}
 
+static int redirect_pipe(const char *data, int *saved_fd)
+{
+    int pipefd[2];
+    if (pipe(pipefd) == -1)
+    {
+        perror("pipe");
+        return 1;
+    }
+    ssize_t written = write(pipefd[1], data, strlen(data));
+    if (written == -1)
+    {
+        perror("write");
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return 1;
+    }
+    close(pipefd[1]);
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(pipefd[0], STDIN_FILENO);
+    close(pipefd[0]);
+    return 0;
+}
+
+static int redirect_dup_output(const char *fd_str, int *saved_fd)
+{
+    int target_fd = atoi(fd_str);
+    *saved_fd = dup(STDOUT_FILENO);
+    dup2(target_fd, STDOUT_FILENO);
+    return 0;
+}
+
+static int redirect_dup_input(const char *fd_str, int *saved_fd)
+{
+    int source_fd = atoi(fd_str);
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(source_fd, STDIN_FILENO);
+    return 0;
+}
+
+static int redirect_read_write(const char *filename, int *saved_fd)
+{
+    int fd = open(filename, O_RDWR | O_CREAT, 0644);
+    if (fd < 0)
+    {
+        perror("open read-write");
+        return 1;
+    }
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(fd, STDIN_FILENO);
+    close(fd);
+    return 0;
+}
+
+static void restore_fds(int saved_stdin, int saved_stdout)
+{
     if (saved_stdin != -1)
     {
         dup2(saved_stdin, STDIN_FILENO);
@@ -234,6 +230,54 @@ static int executeur_de_redirect(ASTNode *node)
         dup2(saved_stdout, STDOUT_FILENO);
         close(saved_stdout);
     }
+}
+
+static int executeur_de_redirect(ASTNode *node)
+{
+    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
+        return 1;
+
+    int saved_stdin = -1;
+    int saved_stdout = -1;
+    int result = 0;
+
+    switch (node->data.redirect.mode)
+    {
+        case TOK_REDIR_IN:
+            result = redirect_input(node->data.redirect.filename, &saved_stdin);
+            break;
+        case TOK_REDIR_OUT:
+            result = redirect_output(node->data.redirect.filename, &saved_stdout);
+            break;
+        case TOK_APPEND:
+            result = redirect_append(node->data.redirect.filename, &saved_stdout);
+            break;
+        case TOK_REDIR_PIPE:
+            result = redirect_pipe(node->data.redirect.filename, &saved_stdin);
+            break;
+        case TOK_DUP_OUT:
+            result = redirect_dup_output(node->data.redirect.filename, &saved_stdout);
+            break;
+        case TOK_DUP_IN:
+            result = redirect_dup_input(node->data.redirect.filename, &saved_stdin);
+            break;
+        case TOK_READ_WRITE:
+            result = redirect_read_write(node->data.redirect.filename, &saved_stdin);
+            break;
+        default:
+            fprintf(stderr, "Redirection existe pas\n");
+            return 1;
+    }
+
+    if (result != 0)
+    {
+        restore_fds(saved_stdin, saved_stdout);
+        return 1;
+    }
+
+    int status = l_executeur_d_ast(node->data.redirect.cmd);
+    restore_fds(saved_stdin, saved_stdout);
+
     return status;
 }
 
