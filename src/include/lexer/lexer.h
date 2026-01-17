@@ -11,6 +11,7 @@ typedef enum
     TOK_ELSE,
     TOK_FI,
     TOK_WHILE,
+    TOK_FOR,
     TOK_DO,
     TOK_DONE,
     TOK_POINT_VIRGULE,

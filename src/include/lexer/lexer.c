@@ -231,6 +231,8 @@ token_type check_keyword(char *word)
         return TOK_DO;
     if (strcmp(word, "done") == 0)
         return TOK_DONE;
+    if (strcmp(word, "for") == 0)
+        return TOK_FOR;
     return TOK_WORDS;
 }
 
