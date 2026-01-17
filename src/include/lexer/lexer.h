@@ -24,6 +24,7 @@ typedef enum
     TOK_AND,
     TOK_REDIR_IN,
     TOK_REDIR_OUT,
+    TOK_REDIR_PIPE,
     TOK_APPEND,
     TOK_HEREDOC,
     TOK_DUP_OUT,
