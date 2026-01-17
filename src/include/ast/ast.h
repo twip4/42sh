@@ -10,8 +10,16 @@ typedef enum
     AST_AND, // &&
     AST_OR, // ||
     AST_REDIRECT, // > < >>
-    AST_SUBSHELL // ( ... )
+    AST_SUBSHELL, // ( ... )
+    AST_IF  
 } ASTNodeType;
+
+typedef struct IfBranch
+{
+    struct ASTNode *condition;
+    struct ASTNode *bloc;
+    struct IfBranch *next;
+} IfBranch;
 
 typedef struct ASTNode
 {
@@ -42,6 +50,12 @@ typedef struct ASTNode
         {
             struct ASTNode *child;
         } subshell;
+
+        struct
+        {
+            IfBranch *branches;
+            struct ASTNode *blocelse;
+        } ifnode;
 
     } data;
 } ASTNode;

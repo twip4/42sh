@@ -16,6 +16,8 @@ static int executeur_de_AND(ASTNode *node);
 static int executeur_de_OR(ASTNode *node);
 static int executeur_de_redirect(ASTNode *node);
 static int executeur_de_subshell(ASTNode *node);
+static int executeur_de_if(ASTNode *node);
+
 
 int l_executeur_d_ast(ASTNode *node)
 {
@@ -35,6 +37,8 @@ int l_executeur_d_ast(ASTNode *node)
         return executeur_de_redirect(node);
     case AST_SUBSHELL:
         return executeur_de_subshell(node);
+    case AST_IF:
+        return executeur_de_if(node);
     default:
         fprintf(stderr, "l executeur  ast: type de noeud %d NOT IMPLEMENTED\n",
                 node->type);
@@ -188,4 +192,23 @@ static int executeur_de_subshell(ASTNode *node)
     int status;
     waitpid(pid, &status, 0);
     return WEXITSTATUS(status);
+}
+
+static int executeur_de_if(ASTNode *node)
+{
+    IfBranch *branch = node->data.ifnode.branches;
+
+    while (branch)
+    {
+        int status = l_executeur_d_ast(branch->condition);
+
+        if (status == 0) return l_executeur_d_ast(branch->bloc);
+
+        branch = branch->next;
+    }
+
+    if (node->data.ifnode.blocelse)
+        return l_executeur_d_ast(node->data.ifnode.blocelse);
+
+    return 0;
 }
