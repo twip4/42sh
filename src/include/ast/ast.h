@@ -2,6 +2,7 @@
 #define AST_H
 
 #include <stdio.h>
+#include "../lexer/lexer.h"
 
 typedef enum
 {
@@ -43,7 +44,7 @@ typedef struct ASTNode
         {
             struct ASTNode *cmd;
             char *filename;
-            int mode; // < = 0, > = 1 , >> = 2
+            token_type mode;// le token type dans lexer.h
         } redirect;
 
         struct

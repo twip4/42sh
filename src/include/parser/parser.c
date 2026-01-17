@@ -64,9 +64,12 @@ ASTNode *parser_redirect(token **current)
 
     while (*current
            && ((*current)->type == TOK_REDIR_IN
-               || (*current)->type == TOK_REDIR_OUT
-               || (*current)->type == TOK_APPEND
-               || (*current)->type == TOK_AMPERSAND))
+                || (*current)->type == TOK_REDIR_OUT
+                || (*current)->type == TOK_APPEND
+                || (*current)->type == TOK_DUP_OUT
+                || (*current)->type == TOK_DUP_IN
+                || (*current)->type == TOK_READ_WRITE
+                || (*current)->type == TOK_REDIR_PIPE))
     {
         *current = (*current)->next;
 
