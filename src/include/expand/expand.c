@@ -6,16 +6,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../../42sh.h"
+#include "../../common.h"
 
 int expand_variable(char **s, int len);
 int expand_special(char **argv, int i);
+char *concat_argv(char **argv, int len);
 
 void replace_var(char **argv, int i, char *var)
 {
-    char *tmp = argv[i];
     argv[i] = strdup(var);
-    free(tmp);
 }
 
 int expand_ast(ASTNode *ast)
@@ -83,27 +82,21 @@ int expand_special(char **argv, int i)
         replace_var(argv, i, str);
         return 1;
     }
-    else if (!strcmp(argv[i], "$*")) // TODO:
+    else if (!strcmp(argv[i], "$*")
+             || !strcmp(argv[i], "$@")) // concat of all argv
     {
-        pid_t shell_pid = getpid();
-        char str[50] = "";
-        sprintf(str, "%d", shell_pid);
-        replace_var(argv, i, str);
+        char *str = concat_argv(argv, i);
+        if (str)
+        {
+            replace_var(argv, i, str);
+            free(str);
+        }
         return 1;
     }
-    else if (!strcmp(argv[i], "$@")) // TODO:
+    else if (!strcmp(argv[i], "$#")) // number of argv
     {
-        pid_t shell_pid = getpid();
         char str[50] = "";
-        sprintf(str, "%d", shell_pid);
-        replace_var(argv, i, str);
-        return 1;
-    }
-    else if (!strcmp(argv[i], "$#")) // TODO:
-    {
-        pid_t shell_pid = getpid();
-        char str[50] = "";
-        sprintf(str, "%d", shell_pid);
+        sprintf(str, "%d", i);
         replace_var(argv, i, str);
         return 1;
     }
@@ -124,16 +117,39 @@ int expand_special(char **argv, int i)
         return 1;
     }
     else if (argv[i][0] == '$'
-             && (argv[i][1] >= '0' && argv[i][1] <= '9')) // TODO:
+             && (argv[i][1] >= '0' && argv[i][1] <= '9')) // value at argv index
     {
-        pid_t shell_pid = getpid();
-        char str[50] = "";
-        sprintf(str, "%d", shell_pid);
-        replace_var(argv, i, str);
+        replace_var(argv, i, argv[argv[i][1] - '0']);
         return 1;
     }
     else
     {
         return 0;
     }
+}
+
+char *concat_argv(char **argv, int len)
+{
+    int full_len = 0;
+
+    if (len < 2)
+        return NULL;
+
+    for (int i = 2; i < len; i++)
+    {
+        full_len += strlen(argv[i]);
+        full_len++;
+    }
+
+    char *str_concat = malloc(full_len);
+
+    if (!str_concat)
+        return NULL;
+
+    for (int i = 2; i < len; i++)
+    {
+        strcat(str_concat, argv[i]);
+    }
+
+    return str_concat;
 }

@@ -119,9 +119,9 @@ int handle_symbol(char *s, int *i, token *tokens)
     if (s[*i] == '>' && s[*i + 1] == '>')
         return (*i += 2, add_token(tokens, TOK_APPEND, NULL));
     if (s[*i] == '>' && s[*i + 1] == '&')
-      return (*i += 2, add_token(tokens, TOK_DUP_OUT, NULL));
+        return (*i += 2, add_token(tokens, TOK_DUP_OUT, NULL));
     if (s[*i] == '>' && s[*i + 1] == '|')
-      return (*i += 2, add_token(tokens, TOK_REDIR_PIPE, NULL));
+        return (*i += 2, add_token(tokens, TOK_REDIR_PIPE, NULL));
     if (s[*i] == '>')
         return (*i += 1, add_token(tokens, TOK_REDIR_OUT, NULL));
     if (s[*i] == '<' && s[*i + 1] == '<')

@@ -1,7 +1,7 @@
+#include "builtins.h"
+
 #include <stdio.h>
 #include <string.h>
-
-#include "builtins.h"
 
 static int builtin_true(void);
 static int builtin_false(void);
@@ -21,24 +21,24 @@ int executeur_de_builtins(char **argv)
     if (strcmp(argv[0], "echo") == 0)
         return builtin_echo(argv);
 
-    return -1; //BUILTIN PAS IMPLEMENTE
+    return -1; // BUILTIN PAS IMPLEMENTE
 }
 
-//TRUE
+// TRUE
 
 static int builtin_true(void)
 {
     return 0;
 }
 
-//FALSE
+// FALSE
 
 static int builtin_false(void)
 {
     return 1;
 }
 
-//ECHO
+// ECHO
 
 static void echo_print(const char *s, int interpret)
 {
@@ -86,10 +86,12 @@ static int builtin_echo(char **argv)
     for (; argv[i]; i++)
     {
         echo_print(argv[i], interpret);
-        if (argv[i + 1]) putchar(' ');
+        if (argv[i + 1])
+            putchar(' ');
     }
 
-    if (newline) putchar('\n');
+    if (newline)
+        putchar('\n');
 
     fflush(stdout);
     return 0;

@@ -1,11 +1,12 @@
 #include "include/lexer/lexer.h"
+#define _GNU_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "42sh.h"
+#include "common.h"
 #include "include/ast/ast.h"
 #include "include/executor/executor.h"
 #include "include/expand/expand.h"
