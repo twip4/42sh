@@ -1,14 +1,16 @@
 #include "include/lexer/lexer.h"
+#define _GNU_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "42sh.h"
+#include "common.h"
 #include "include/ast/ast.h"
 #include "include/executor/executor.h"
 #include "include/expand/expand.h"
+#include "include/garbage/garbage.h"
 #include "include/parser/parser.h"
 
 int last_return_code = 0;
@@ -82,6 +84,7 @@ int main(int argc, char *argv[])
 
             token_free_all(tokens);
             free_ast(ast);
+            clear_garbage();
         }
 
         free(line);
@@ -107,6 +110,7 @@ int main(int argc, char *argv[])
 
         token_free_all(tokens);
         free_ast(ast);
+        clear_garbage();
     }
 
     if (input != stdin)
@@ -120,5 +124,6 @@ int main(int argc, char *argv[])
 
 error:
     fprintf(stderr, "error \n");
+    clear_garbage();
     return 1;
 }

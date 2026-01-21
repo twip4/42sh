@@ -44,9 +44,9 @@ int l_executeur_d_ast(ASTNode *node)
 
 static int executeur_de_commande(ASTNode *node)
 {
-
     int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
-    if(builtin_fait_maison != -1) return builtin_fait_maison;
+    if (builtin_fait_maison != -1)
+        return builtin_fait_maison;
 
     pid_t pid = fork();
 
@@ -118,7 +118,8 @@ static int executeur_de_OR(ASTNode *node)
 
 static int executeur_de_redirect(ASTNode *node)
 {
-    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd) return 1;
+    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
+        return 1;
 
     int fd;
     int saved_stdin = -1;
@@ -138,8 +139,8 @@ static int executeur_de_redirect(ASTNode *node)
     }
     else if (node->data.redirect.mode == 1) // >
     {
-        fd = open(node->data.redirect.filename,
-                  O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        fd = open(node->data.redirect.filename, O_WRONLY | O_CREAT | O_TRUNC,
+                  0644);
         if (fd < 0)
         {
             perror("open output");
@@ -149,10 +150,10 @@ static int executeur_de_redirect(ASTNode *node)
         dup2(fd, STDOUT_FILENO);
         close(fd);
     }
-     else if (node->data.redirect.mode == 2) // >>
+    else if (node->data.redirect.mode == 2) // >>
     {
-        fd = open(node->data.redirect.filename,
-                  O_WRONLY | O_CREAT | O_APPEND, 0644);
+        fd = open(node->data.redirect.filename, O_WRONLY | O_CREAT | O_APPEND,
+                  0644);
         if (fd < 0)
         {
             perror("open append");
