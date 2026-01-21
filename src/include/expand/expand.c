@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "../../common.h"
+#include "../garbage/garbage.h"
 
 int expand_variable(char **s, int len);
 int expand_special(char **argv, int i);
@@ -15,6 +16,7 @@ char *concat_argv(char **argv, int len);
 void replace_var(char **argv, int i, char *var)
 {
     argv[i] = strdup(var);
+    add_garbage(argv[i]);
 }
 
 int expand_ast(ASTNode *ast)

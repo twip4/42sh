@@ -9,6 +9,7 @@ bin_PROGRAMS = 42sh
     include/prettyprinter/prettyprinter.c \
     include/builtins/builtins.c \
     include/expand/expand.c \
+    include/garbage/garbage.c \
     42sh.h 
 
 AM_CFLAGS = -Wall -Wextra -Werror
