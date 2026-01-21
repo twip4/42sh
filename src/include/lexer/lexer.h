@@ -44,7 +44,7 @@ typedef struct token_struct
 
 token *token_init(void);
 token *token_new(token_type type, char *value);
-void token_add(token *head, token *new);
+void token_add(token *head, token *token);
 void token_free_all(token *head);
 
 token_type check_keyword(char *word);

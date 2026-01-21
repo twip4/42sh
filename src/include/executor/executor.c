@@ -4,9 +4,9 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "../ast/ast.h"
 #include "../builtins/builtins.h"
@@ -19,7 +19,6 @@ static int executeur_de_OR(ASTNode *node);
 static int executeur_de_redirect(ASTNode *node);
 static int executeur_de_subshell(ASTNode *node);
 static int executeur_de_if(ASTNode *node);
-
 
 int l_executeur_d_ast(ASTNode *node)
 {
@@ -121,7 +120,6 @@ static int executeur_de_OR(ASTNode *node)
         return l_executeur_d_ast(node->data.child.right);
     return status;
 }
-
 
 static int redirect_input(const char *filename, int *saved_fd)
 {
@@ -243,30 +241,32 @@ static int executeur_de_redirect(ASTNode *node)
 
     switch (node->data.redirect.mode)
     {
-        case TOK_REDIR_IN:
-            result = redirect_input(node->data.redirect.filename, &saved_stdin);
-            break;
-        case TOK_REDIR_OUT:
-            result = redirect_output(node->data.redirect.filename, &saved_stdout);
-            break;
-        case TOK_APPEND:
-            result = redirect_append(node->data.redirect.filename, &saved_stdout);
-            break;
-        case TOK_REDIR_PIPE:
-            result = redirect_pipe(node->data.redirect.filename, &saved_stdin);
-            break;
-        case TOK_DUP_OUT:
-            result = redirect_dup_output(node->data.redirect.filename, &saved_stdout);
-            break;
-        case TOK_DUP_IN:
-            result = redirect_dup_input(node->data.redirect.filename, &saved_stdin);
-            break;
-        case TOK_READ_WRITE:
-            result = redirect_read_write(node->data.redirect.filename, &saved_stdin);
-            break;
-        default:
-            fprintf(stderr, "Redirection existe pas\n");
-            return 1;
+    case TOK_REDIR_IN:
+        result = redirect_input(node->data.redirect.filename, &saved_stdin);
+        break;
+    case TOK_REDIR_OUT:
+        result = redirect_output(node->data.redirect.filename, &saved_stdout);
+        break;
+    case TOK_APPEND:
+        result = redirect_append(node->data.redirect.filename, &saved_stdout);
+        break;
+    case TOK_REDIR_PIPE:
+        result = redirect_pipe(node->data.redirect.filename, &saved_stdin);
+        break;
+    case TOK_DUP_OUT:
+        result =
+            redirect_dup_output(node->data.redirect.filename, &saved_stdout);
+        break;
+    case TOK_DUP_IN:
+        result = redirect_dup_input(node->data.redirect.filename, &saved_stdin);
+        break;
+    case TOK_READ_WRITE:
+        result =
+            redirect_read_write(node->data.redirect.filename, &saved_stdin);
+        break;
+    default:
+        fprintf(stderr, "Redirection existe pas\n");
+        return 1;
     }
 
     if (result != 0)
@@ -300,7 +300,8 @@ static int executeur_de_if(ASTNode *node)
     {
         int status = l_executeur_d_ast(branch->condition);
 
-        if (status == 0) return l_executeur_d_ast(branch->bloc);
+        if (status == 0)
+            return l_executeur_d_ast(branch->bloc);
 
         branch = branch->next;
     }

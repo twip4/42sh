@@ -64,12 +64,12 @@ ASTNode *parser_redirect(token **current)
 
     while (*current
            && ((*current)->type == TOK_REDIR_IN
-                || (*current)->type == TOK_REDIR_OUT
-                || (*current)->type == TOK_APPEND
-                || (*current)->type == TOK_DUP_OUT
-                || (*current)->type == TOK_DUP_IN
-                || (*current)->type == TOK_READ_WRITE
-                || (*current)->type == TOK_REDIR_PIPE))
+               || (*current)->type == TOK_REDIR_OUT
+               || (*current)->type == TOK_APPEND
+               || (*current)->type == TOK_DUP_OUT
+               || (*current)->type == TOK_DUP_IN
+               || (*current)->type == TOK_READ_WRITE
+               || (*current)->type == TOK_REDIR_PIPE))
     {
         *current = (*current)->next;
 
@@ -111,8 +111,9 @@ ASTNode *parser_subshell(token **current)
 
 ASTNode *parser_command(token **current)
 {
-    //regle IF
-    if (*current && (*current)->type == TOK_IF) return parser_if(current);
+    // regle IF
+    if (*current && (*current)->type == TOK_IF)
+        return parser_if(current);
 
     ASTNode *node = new_node();
     node->type = AST_COMMAND;
@@ -149,7 +150,8 @@ void skip_semicolons(token **current)
 
 ASTNode *parser_if(token **current)
 {
-    if (!current || !*current || (*current)->type != TOK_IF) return NULL;
+    if (!current || !*current || (*current)->type != TOK_IF)
+        return NULL;
 
     ASTNode *node = new_node();
     node->type = AST_IF;
@@ -189,9 +191,11 @@ ASTNode *parser_if(token **current)
             branch->bloc = bloc;
             branch->next = NULL;
 
-            if (!node->data.ifnode.branches) node->data.ifnode.branches = branch;
+            if (!node->data.ifnode.branches)
+                node->data.ifnode.branches = branch;
 
-            else last_branch->next = branch;
+            else
+                last_branch->next = branch;
 
             last_branch = branch;
         }
@@ -199,7 +203,7 @@ ASTNode *parser_if(token **current)
         {
             *current = (*current)->next;
             node->data.ifnode.blocelse = parser_logique(current);
-            
+
             skip_semicolons(current);
         }
         else if (t == TOK_FI)
@@ -207,7 +211,8 @@ ASTNode *parser_if(token **current)
             *current = (*current)->next;
             break;
         }
-        else break;
+        else
+            break;
     }
 
     return node;
