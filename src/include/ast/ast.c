@@ -9,6 +9,22 @@ ASTNode *new_node()
     return new;
 }
 
+void free_if_branches(IfBranch *branch)
+{
+    IfBranch *next;
+
+    while (branch)
+    {
+        next = branch->next;
+
+        free_ast(branch->condition);
+        free_ast(branch->bloc);
+        free(branch);
+
+        branch = next;
+    }
+}
+
 void free_ast(ASTNode *node)
 {
     if (!node)
@@ -27,6 +43,11 @@ void free_ast(ASTNode *node)
         free_ast(node->data.child.right);
         break;
 
+    case AST_IF:
+        free_if_branches(node->data.ifnode.branches);
+        free_ast(node->data.ifnode.blocelse);
+        break;
+
     case AST_REDIRECT:
         free_ast(node->data.redirect.cmd);
         free(node->data.redirect.filename);
@@ -40,7 +61,7 @@ void free_ast(ASTNode *node)
     free(node);
 }
 
-static void print_indent(int depth)
+void print_indent(int depth)
 {
     for (int i = 0; i < depth; i++)
         printf("  ");
@@ -89,55 +110,37 @@ void ast_pretty_print(ASTNode *node, int depth)
         break;
 
     case AST_IF:
-      printf("IF\n");
-      IfBranch *branch = node->data.ifnode.branches;
-      while (branch) {
-        print_indent(depth + 1);
-        printf("CONDITION:\n");
-        ast_pretty_print(branch->condition, depth + 2);
-        print_indent(depth + 1);
-        printf("THEN:\n");
-        ast_pretty_print(branch->bloc, depth + 2);
-        branch = branch->next;
-      }
-      if (node->data.ifnode.blocelse) {
-        print_indent(depth + 1);
-        printf("ELSE:\n");
-        ast_pretty_print(node->data.ifnode.blocelse, depth + 2);
-      }
-      print_indent(depth);
-      printf("FI\n");
-      break;
+        printf("IF\n");
+        IfBranch *branch = node->data.ifnode.branches;
+        while (branch)
+        {
+            print_indent(depth + 1);
+            printf("CONDITION:\n");
+            ast_pretty_print(branch->condition, depth + 2);
+            print_indent(depth + 1);
+            printf("THEN:\n");
+            ast_pretty_print(branch->bloc, depth + 2);
+            branch = branch->next;
+        }
+        if (node->data.ifnode.blocelse)
+        {
+            print_indent(depth + 1);
+            printf("ELSE:\n");
+            ast_pretty_print(node->data.ifnode.blocelse, depth + 2);
+        }
+        print_indent(depth);
+        printf("FI\n");
+        break;
 
-  case AST_IF:
-    printf("IF\n");
-    IfBranch *branch = node->data.ifnode.branches;
-    while (branch) {
-      print_indent(depth + 1);
-      printf("CONDITION:\n");
-      ast_pretty_print(branch->condition, depth + 2);
-      print_indent(depth + 1);
-      printf("THEN:\n");
-      ast_pretty_print(branch->bloc, depth + 2);
-      branch = branch->next;
+    default:
+        printf("UNKNOWN\n");
     }
-    if (node->data.ifnode.blocelse) {
-      print_indent(depth + 1);
-      printf("ELSE:\n");
-      ast_pretty_print(node->data.ifnode.blocelse, depth + 2);
+
+    if (node->type == AST_PIPE || node->type == AST_AND || node->type == AST_OR)
+    {
+        if (node->data.child.left)
+            ast_pretty_print(node->data.child.left, depth + 1);
+        if (node->data.child.right)
+            ast_pretty_print(node->data.child.right, depth + 1);
     }
-    print_indent(depth);
-    printf("FI\n");
-    break;
-
-  default:
-    printf("UNKNOWN\n");
-  }
-
-  if (node->type == AST_PIPE || node->type == AST_AND || node->type == AST_OR) {
-    if (node->data.child.left)
-      ast_pretty_print(node->data.child.left, depth + 1);
-    if (node->data.child.right)
-      ast_pretty_print(node->data.child.right, depth + 1);
-  }
 }

@@ -19,6 +19,20 @@ void replace_var(char **argv, int i, char *var)
     add_garbage(argv[i]);
 }
 
+int expand_if_branches(IfBranch *branch)
+{
+    while (branch)
+    {
+        if (!expand_ast(branch->condition))
+            return 0;
+        if (!expand_ast(branch->bloc))
+            return 0;
+
+        branch = branch->next;
+    }
+    return 1;
+}
+
 int expand_ast(ASTNode *ast)
 {
     if (!ast)
@@ -41,6 +55,10 @@ int expand_ast(ASTNode *ast)
     case AST_SUBSHELL:
         return expand_ast(ast->data.subshell.child);
         break;
+    case AST_IF:
+        if (!expand_if_branches(ast->data.ifnode.branches))
+            return 0;
+        return expand_ast(ast->data.ifnode.blocelse);
     }
 
     return 1;
