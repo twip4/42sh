@@ -8,6 +8,7 @@ ASTNode *parser_logique(token **current);
 ASTNode *parser_pipe(token **current);
 ASTNode *parser_redirect(token **current);
 ASTNode *parser_subshell(token **current);
+ASTNode *parser_if(token **current);
 
 ASTNode *parser(token *tokens)
 {
@@ -63,9 +64,12 @@ ASTNode *parser_redirect(token **current)
 
     while (*current
            && ((*current)->type == TOK_REDIR_IN
-               || (*current)->type == TOK_REDIR_OUT
-               || (*current)->type == TOK_APPEND
-               || (*current)->type == TOK_AMPERSAND))
+                || (*current)->type == TOK_REDIR_OUT
+                || (*current)->type == TOK_APPEND
+                || (*current)->type == TOK_DUP_OUT
+                || (*current)->type == TOK_DUP_IN
+                || (*current)->type == TOK_READ_WRITE
+                || (*current)->type == TOK_REDIR_PIPE))
     {
         *current = (*current)->next;
 
@@ -107,6 +111,9 @@ ASTNode *parser_subshell(token **current)
 
 ASTNode *parser_command(token **current)
 {
+    //regle IF
+    if (*current && (*current)->type == TOK_IF) return parser_if(current);
+
     ASTNode *node = new_node();
     node->type = AST_COMMAND;
 
@@ -128,6 +135,80 @@ ASTNode *parser_command(token **current)
     node->data.command.argv[argc] = NULL;
 
     node->data.command.len = argc;
+
+    return node;
+}
+
+void skip_semicolons(token **current)
+{
+    while (*current && (*current)->type == TOK_POINT_VIRGULE)
+    {
+        *current = (*current)->next;
+    }
+}
+
+ASTNode *parser_if(token **current)
+{
+    if (!current || !*current || (*current)->type != TOK_IF) return NULL;
+
+    ASTNode *node = new_node();
+    node->type = AST_IF;
+    node->data.ifnode.branches = NULL;
+    node->data.ifnode.blocelse = NULL;
+
+    IfBranch *last_branch = NULL;
+
+    while (*current)
+    {
+        token_type t = (*current)->type;
+
+        if (t == TOK_IF || t == TOK_ELIF)
+        {
+            *current = (*current)->next;
+
+            ASTNode *condition = parser_logique(current);
+
+            while (*current && (*current)->type == TOK_POINT_VIRGULE)
+            {
+                *current = (*current)->next;
+            }
+
+            if (!*current || (*current)->type != TOK_THEN)
+            {
+                printf("parser_if: ya pas THEN\n");
+                return NULL;
+            }
+            *current = (*current)->next;
+
+            ASTNode *bloc = parser_logique(current);
+
+            skip_semicolons(current);
+
+            IfBranch *branch = malloc(sizeof(IfBranch));
+            branch->condition = condition;
+            branch->bloc = bloc;
+            branch->next = NULL;
+
+            if (!node->data.ifnode.branches) node->data.ifnode.branches = branch;
+
+            else last_branch->next = branch;
+
+            last_branch = branch;
+        }
+        else if (t == TOK_ELSE)
+        {
+            *current = (*current)->next;
+            node->data.ifnode.blocelse = parser_logique(current);
+            
+            skip_semicolons(current);
+        }
+        else if (t == TOK_FI)
+        {
+            *current = (*current)->next;
+            break;
+        }
+        else break;
+    }
 
     return node;
 }

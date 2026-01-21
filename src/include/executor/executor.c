@@ -6,9 +6,11 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "../ast/ast.h"
 #include "../builtins/builtins.h"
+#include "../lexer/lexer.h"
 
 static int executeur_de_commande(ASTNode *node);
 static int executeur_de_pipe(ASTNode *node);
@@ -16,6 +18,8 @@ static int executeur_de_AND(ASTNode *node);
 static int executeur_de_OR(ASTNode *node);
 static int executeur_de_redirect(ASTNode *node);
 static int executeur_de_subshell(ASTNode *node);
+static int executeur_de_if(ASTNode *node);
+
 
 int l_executeur_d_ast(ASTNode *node)
 {
@@ -35,6 +39,8 @@ int l_executeur_d_ast(ASTNode *node)
         return executeur_de_redirect(node);
     case AST_SUBSHELL:
         return executeur_de_subshell(node);
+    case AST_IF:
+        return executeur_de_if(node);
     default:
         fprintf(stderr, "l executeur  ast: type de noeud %d NOT IMPLEMENTED\n",
                 node->type);
@@ -116,56 +122,104 @@ static int executeur_de_OR(ASTNode *node)
     return status;
 }
 
-static int executeur_de_redirect(ASTNode *node)
+
+static int redirect_input(const char *filename, int *saved_fd)
 {
-    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0)
+    {
+        perror("open input");
         return 1;
-
-    int fd;
-    int saved_stdin = -1;
-    int saved_stdout = -1;
-
-    if (node->data.redirect.mode == 0) // <
-    {
-        fd = open(node->data.redirect.filename, O_RDONLY);
-        if (fd < 0)
-        {
-            perror("open input");
-            return 1;
-        }
-        saved_stdin = dup(STDIN_FILENO);
-        dup2(fd, STDIN_FILENO);
-        close(fd);
     }
-    else if (node->data.redirect.mode == 1) // >
-    {
-        fd = open(node->data.redirect.filename, O_WRONLY | O_CREAT | O_TRUNC,
-                  0644);
-        if (fd < 0)
-        {
-            perror("open output");
-            return 1;
-        }
-        saved_stdout = dup(STDOUT_FILENO);
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-    }
-    else if (node->data.redirect.mode == 2) // >>
-    {
-        fd = open(node->data.redirect.filename, O_WRONLY | O_CREAT | O_APPEND,
-                  0644);
-        if (fd < 0)
-        {
-            perror("open append");
-            return 1;
-        }
-        saved_stdout = dup(STDOUT_FILENO);
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-    }
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(fd, STDIN_FILENO);
+    close(fd);
+    return 0;
+}
 
-    int status = l_executeur_d_ast(node->data.redirect.cmd);
+static int redirect_output(const char *filename, int *saved_fd)
+{
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0)
+    {
+        perror("open output");
+        return 1;
+    }
+    *saved_fd = dup(STDOUT_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+    return 0;
+}
 
+static int redirect_append(const char *filename, int *saved_fd)
+{
+    int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd < 0)
+    {
+        perror("open append");
+        return 1;
+    }
+    *saved_fd = dup(STDOUT_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+    return 0;
+}
+
+static int redirect_pipe(const char *data, int *saved_fd)
+{
+    int pipefd[2];
+    if (pipe(pipefd) == -1)
+    {
+        perror("pipe");
+        return 1;
+    }
+    ssize_t written = write(pipefd[1], data, strlen(data));
+    if (written == -1)
+    {
+        perror("write");
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return 1;
+    }
+    close(pipefd[1]);
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(pipefd[0], STDIN_FILENO);
+    close(pipefd[0]);
+    return 0;
+}
+
+static int redirect_dup_output(const char *fd_str, int *saved_fd)
+{
+    int target_fd = atoi(fd_str);
+    *saved_fd = dup(STDOUT_FILENO);
+    dup2(target_fd, STDOUT_FILENO);
+    return 0;
+}
+
+static int redirect_dup_input(const char *fd_str, int *saved_fd)
+{
+    int source_fd = atoi(fd_str);
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(source_fd, STDIN_FILENO);
+    return 0;
+}
+
+static int redirect_read_write(const char *filename, int *saved_fd)
+{
+    int fd = open(filename, O_RDWR | O_CREAT, 0644);
+    if (fd < 0)
+    {
+        perror("open read-write");
+        return 1;
+    }
+    *saved_fd = dup(STDIN_FILENO);
+    dup2(fd, STDIN_FILENO);
+    close(fd);
+    return 0;
+}
+
+static void restore_fds(int saved_stdin, int saved_stdout)
+{
     if (saved_stdin != -1)
     {
         dup2(saved_stdin, STDIN_FILENO);
@@ -176,6 +230,54 @@ static int executeur_de_redirect(ASTNode *node)
         dup2(saved_stdout, STDOUT_FILENO);
         close(saved_stdout);
     }
+}
+
+static int executeur_de_redirect(ASTNode *node)
+{
+    if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
+        return 1;
+
+    int saved_stdin = -1;
+    int saved_stdout = -1;
+    int result = 0;
+
+    switch (node->data.redirect.mode)
+    {
+        case TOK_REDIR_IN:
+            result = redirect_input(node->data.redirect.filename, &saved_stdin);
+            break;
+        case TOK_REDIR_OUT:
+            result = redirect_output(node->data.redirect.filename, &saved_stdout);
+            break;
+        case TOK_APPEND:
+            result = redirect_append(node->data.redirect.filename, &saved_stdout);
+            break;
+        case TOK_REDIR_PIPE:
+            result = redirect_pipe(node->data.redirect.filename, &saved_stdin);
+            break;
+        case TOK_DUP_OUT:
+            result = redirect_dup_output(node->data.redirect.filename, &saved_stdout);
+            break;
+        case TOK_DUP_IN:
+            result = redirect_dup_input(node->data.redirect.filename, &saved_stdin);
+            break;
+        case TOK_READ_WRITE:
+            result = redirect_read_write(node->data.redirect.filename, &saved_stdin);
+            break;
+        default:
+            fprintf(stderr, "Redirection existe pas\n");
+            return 1;
+    }
+
+    if (result != 0)
+    {
+        restore_fds(saved_stdin, saved_stdout);
+        return 1;
+    }
+
+    int status = l_executeur_d_ast(node->data.redirect.cmd);
+    restore_fds(saved_stdin, saved_stdout);
+
     return status;
 }
 
@@ -188,4 +290,23 @@ static int executeur_de_subshell(ASTNode *node)
     int status;
     waitpid(pid, &status, 0);
     return WEXITSTATUS(status);
+}
+
+static int executeur_de_if(ASTNode *node)
+{
+    IfBranch *branch = node->data.ifnode.branches;
+
+    while (branch)
+    {
+        int status = l_executeur_d_ast(branch->condition);
+
+        if (status == 0) return l_executeur_d_ast(branch->bloc);
+
+        branch = branch->next;
+    }
+
+    if (node->data.ifnode.blocelse)
+        return l_executeur_d_ast(node->data.ifnode.blocelse);
+
+    return 0;
 }

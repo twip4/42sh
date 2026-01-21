@@ -2,6 +2,7 @@
 #define AST_H
 
 #include <stdio.h>
+#include "../lexer/lexer.h"
 
 typedef enum
 {
@@ -10,8 +11,16 @@ typedef enum
     AST_AND, // &&
     AST_OR, // ||
     AST_REDIRECT, // > < >>
-    AST_SUBSHELL // ( ... )
+    AST_SUBSHELL, // ( ... )
+    AST_IF  
 } ASTNodeType;
+
+typedef struct IfBranch
+{
+    struct ASTNode *condition;
+    struct ASTNode *bloc;
+    struct IfBranch *next;
+} IfBranch;
 
 typedef struct ASTNode
 {
@@ -35,13 +44,19 @@ typedef struct ASTNode
         {
             struct ASTNode *cmd;
             char *filename;
-            int mode; // < = 0, > = 1 , >> = 2
+            token_type mode;// le token type dans lexer.h
         } redirect;
 
         struct
         {
             struct ASTNode *child;
         } subshell;
+
+        struct
+        {
+            IfBranch *branches;
+            struct ASTNode *blocelse;
+        } ifnode;
 
     } data;
 } ASTNode;
