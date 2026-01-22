@@ -46,3 +46,4 @@ fi
 echo "functional:"
 run_test "echo simple" "$BIN_PATH -c 'echo toto'" "toto"
 run_test "echo with quotes" "$BIN_PATH -c 'echo \"Toto | tata\"'" "Toto | tata"
+run_test "cd and pwd" "$BIN_PATH -c 'cd /tmp && pwd'" "/tmp"
