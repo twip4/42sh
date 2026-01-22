@@ -1,7 +1,9 @@
 #include "builtins.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../../common.h"
 
@@ -9,6 +11,7 @@ static int builtin_true(void);
 static int builtin_false(void);
 static int builtin_echo(char **argv);
 int builtin_exit(void);
+int builtin_cd(char **argv);
 
 int executeur_de_builtins(char **argv)
 {
@@ -26,6 +29,9 @@ int executeur_de_builtins(char **argv)
 
     if (strcmp(argv[0], "exit") == 0)
         return builtin_exit();
+
+    if (strcmp(argv[0], "cd") == 0)
+        return builtin_cd(argv);
 
     return -1; // BUILTIN PAS IMPLEMENTE
 }
@@ -106,5 +112,33 @@ static int builtin_echo(char **argv)
 int builtin_exit(void)
 {
     run_tty = 0;
+    return 0;
+}
+
+int builtin_cd(char **argv)
+{
+    char *path;
+    if (!argv[1])
+        path = getenv("HOME");
+    else if (strcmp(argv[1], "-") == 0)
+        path = getenv("OLDPWD");
+    else
+        path = argv[1];
+
+    char *current_pwd = getcwd(NULL, 0);
+    if (chdir(path) != 0) // on fait du coup le chdir et on regarde si ca marche
+    {
+        fprintf(stderr, "cd: %s: No such file or directory\n", path);
+        free(current_pwd);
+        return 1;
+    }
+
+    if (current_pwd)
+    {
+        setenv("OLDPWD", current_pwd, 1);
+        current_pwd = getcwd(NULL, 0);
+        setenv("PWD", current_pwd, 1);
+        free(current_pwd);
+    }
     return 0;
 }
