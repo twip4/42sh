@@ -9,5 +9,7 @@ bin_PROGRAMS = 42sh
     include/builtins/builtins.c \
     include/expand/expand.c \
     include/garbage/garbage.c \
+    include/parser/commands/commands.c \
+    include/executor/redirects/redirects.c \
     42sh.h 
 
