@@ -3,9 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../../common.h"
+
 static int builtin_true(void);
 static int builtin_false(void);
 static int builtin_echo(char **argv);
+int builtin_exit(void);
 
 int executeur_de_builtins(char **argv)
 {
@@ -20,6 +23,9 @@ int executeur_de_builtins(char **argv)
 
     if (strcmp(argv[0], "echo") == 0)
         return builtin_echo(argv);
+
+    if (strcmp(argv[0], "exit") == 0)
+        return builtin_exit();
 
     return -1; // BUILTIN PAS IMPLEMENTE
 }
@@ -94,5 +100,11 @@ static int builtin_echo(char **argv)
         putchar('\n');
 
     fflush(stdout);
+    return 0;
+}
+
+int builtin_exit(void)
+{
+    run_tty = 0;
     return 0;
 }
