@@ -87,3 +87,17 @@ void skip_semicolons(token **current)
         *current = (*current)->next;
     }
 }
+
+ASTNode *parser_for(token **current){
+
+    (void)current;
+    return NULL;
+}
+
+
+ASTNode *parser_while(token **current){
+
+    (void)current;
+    return NULL;
+
+}
