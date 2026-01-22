@@ -1,6 +1,3 @@
-#include "include/lexer/lexer.h"
-#define _GNU_SOURCE
-#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +8,7 @@
 #include "include/executor/executor.h"
 #include "include/expand/expand.h"
 #include "include/garbage/garbage.h"
+#include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
 int last_return_code = 0;
