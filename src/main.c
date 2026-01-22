@@ -14,6 +14,7 @@
 #include "include/parser/parser.h"
 
 int last_return_code = 0;
+int run_tty = 1;
 
 int main(int argc, char *argv[])
 {
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
 
     if (input == stdin)
     {
-        while (1)
+        while (run_tty)
         {
             if (tty)
             {
