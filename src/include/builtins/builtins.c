@@ -13,6 +13,7 @@ int builtin_echo(char **argv);
 int builtin_exit(void);
 int builtin_cd(char **argv);
 int builtin_export(char **argv);
+void clear_exports(export_history *head);
 
 extern ShellState g_shell;
 
@@ -120,6 +121,7 @@ int builtin_echo(char **argv)
 int builtin_exit(void)
 {
     g_shell.run_tty = 0;
+    clear_exports(g_shell.exports);
     return 0;
 }
 
@@ -169,6 +171,53 @@ int split_key_value(const char *str, char **key, char **value)
 
 // EXPORT
 
+export_history *add_export(export_history *head, char *key)
+{
+    export_history *node = malloc(sizeof(export_history));
+    if (!node)
+        return head;
+
+    node->key = key;
+    node->next = NULL;
+
+    if (!head)
+        return node;
+
+    export_history *current = head;
+    while (current->next)
+        current = current->next;
+    current->next = node;
+
+    return head;
+}
+
+void print_exports(export_history *head)
+{
+    printf("export list :\n");
+    export_history *current = head;
+    while (current)
+    {
+        char *value = getenv(current->key);
+        if (value)
+            printf("export %s=%s\n", current->key, value);
+        else
+            printf("export %s\n", current->key);
+        current = current->next;
+    }
+}
+
+void clear_exports(export_history *head)
+{
+    export_history *curr = head;
+    while (curr)
+    {
+        export_history *next = curr->next;
+        free(curr->key);
+        free(curr);
+        curr = next;
+    }
+}
+
 int builtin_export(char **argv)
 {
     if (argv[1])
@@ -178,25 +227,16 @@ int builtin_export(char **argv)
 
         if (strcmp(argv[1], "-p") == 0)
         {
-            if (argv[2])
-            {
-                if (!split_key_value(argv[2], &key, &value))
-                    return 1;
-                setenv(key, value, 1);
-            }
-            else
-                return 1;
-
-            printf("export %s=%s\n", key, value);
+            print_exports(g_shell.exports);
         }
         else
         {
-            if (!split_key_value(argv[2], &key, &value))
+            if (!split_key_value(argv[1], &key, &value))
                 return 1;
+            add_export(g_shell.exports, key);
             setenv(key, value, 1);
         }
 
-        free(key);
         free(value);
         return 0;
     }
