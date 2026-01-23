@@ -88,6 +88,7 @@ ASTNode *parser_redirect(token **current)
         node->data.redirect.mode = mode;
         // node->data.redirect.filename = (*current)->value;
         node->data.redirect.filename = strdup((*current)->value);
+
         node->data.redirect.cmd = next;
 
         *current = (*current)->next;
@@ -133,8 +134,8 @@ ASTNode *parser_command(token **current)
     {
         node->data.command.argv =
             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
-        // node->data.command.argv[argc++] = (*current)->value;
-        node->data.command.argv[argc++] = strdup((*current)->value);
+        node->data.command.argv[argc++] = (*current)->value;
+        // node->data.command.argv[argc++] = strdup((*current)->value);
 
         *current = (*current)->next;
     }
