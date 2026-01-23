@@ -118,7 +118,7 @@ int builtin_exit(void)
 int builtin_cd(char **argv)
 {
     char *path;
-    if (!argv[1])
+    if (!argv[1] || strcmp(argv[1], "~") == 0)
         path = getenv("HOME");
     else if (strcmp(argv[1], "-") == 0)
         path = getenv("OLDPWD");
@@ -136,6 +136,8 @@ int builtin_cd(char **argv)
     if (current_pwd)
     {
         setenv("OLDPWD", current_pwd, 1);
+        free(current_pwd);
+        current_pwd = NULL;
         current_pwd = getcwd(NULL, 0);
         setenv("PWD", current_pwd, 1);
         free(current_pwd);

@@ -78,7 +78,7 @@ int expand_variable(char **s, int len)
             }
             else
             {
-                return expand_special(s, i);
+                expand_special(s, i);
             }
         }
     }
