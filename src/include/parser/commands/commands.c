@@ -1,13 +1,12 @@
 #define _POSIX_C_SOURCE 200809L
+#include "commands.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "commands.h"
-
-void skip_semicolons(token **current);
-
+int skip_semicolons_et_retour_a_la_ligne(token **current);
 
 ASTNode *parser_if(token **current)
 {
@@ -31,21 +30,21 @@ ASTNode *parser_if(token **current)
 
             ASTNode *condition = parser_logique(current);
 
-            while (*current && (*current)->type == TOK_POINT_VIRGULE)
+            if (!skip_semicolons_et_retour_a_la_ligne(current))
             {
-                *current = (*current)->next;
+                return NULL;
             }
 
             if (!*current || (*current)->type != TOK_THEN)
             {
-                printf("parser_if: ya pas THEN\n");
                 return NULL;
             }
+
             *current = (*current)->next;
 
             ASTNode *bloc = parser_logique(current);
 
-            skip_semicolons(current);
+            skip_semicolons_et_retour_a_la_ligne(current);
 
             IfBranch *branch = malloc(sizeof(IfBranch));
             branch->condition = condition;
@@ -65,7 +64,7 @@ ASTNode *parser_if(token **current)
             *current = (*current)->next;
             node->data.ifnode.blocelse = parser_logique(current);
 
-            skip_semicolons(current);
+            skip_semicolons_et_retour_a_la_ligne(current);
         }
         else if (t == TOK_FI)
         {
@@ -75,29 +74,28 @@ ASTNode *parser_if(token **current)
         else
             break;
     }
-
     return node;
 }
 
-
-void skip_semicolons(token **current)
+int skip_semicolons_et_retour_a_la_ligne(token **current)
 {
-    while (*current && (*current)->type == TOK_POINT_VIRGULE)
+    int skipped = 0;
+    while (*current && ((*current)->type == TOK_POINT_VIRGULE || (*current)->type == TOK_NEWLINE))
     {
         *current = (*current)->next;
+        skipped = 1;
     }
+    return skipped;
 }
 
-ASTNode *parser_for(token **current){
-
+ASTNode *parser_for(token **current)
+{
     (void)current;
     return NULL;
 }
 
-
-ASTNode *parser_while(token **current){
-
+ASTNode *parser_while(token **current)
+{
     (void)current;
     return NULL;
-
 }

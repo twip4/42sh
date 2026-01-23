@@ -1,9 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
-#include <string.h>
+#include "parser.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "parser.h"
 #include "./commands/commands.h"
 
 ASTNode *parser_command(token **current);
@@ -85,7 +86,7 @@ ASTNode *parser_redirect(token **current)
         ASTNode *node = new_node();
         node->type = AST_REDIRECT;
         node->data.redirect.mode = mode;
-        //node->data.redirect.filename = (*current)->value;
+        // node->data.redirect.filename = (*current)->value;
         node->data.redirect.filename = strdup((*current)->value);
         node->data.redirect.cmd = next;
 
@@ -132,7 +133,7 @@ ASTNode *parser_command(token **current)
     {
         node->data.command.argv =
             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
-        //node->data.command.argv[argc++] = (*current)->value;
+        // node->data.command.argv[argc++] = (*current)->value;
         node->data.command.argv[argc++] = strdup((*current)->value);
 
         *current = (*current)->next;

@@ -71,6 +71,11 @@ int main(int argc, char *argv[])
             if (!tokens)
                 goto error;
 
+            printf("Tokens générés :\n");
+    for (token *t = tokens; t; t = t->next) {
+        printf("type=%d, value='%s'\n", t->type, t->value ? t->value : "NULL");
+    }
+
             ASTNode *ast = parser(tokens);
             if (!ast)
                 goto error;
