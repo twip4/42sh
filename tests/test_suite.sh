@@ -68,3 +68,15 @@ run_test "dup input <&" "$BIN_PATH -c 'cat <&0 < in.txt'" "dup input test"
 
 run_test "read/write <>" "$BIN_PATH -c 'echo rw test <> rw.txt; cat rw.txt'" "rw test"
 run_test "cd and pwd" "$BIN_PATH -c 'cd /tmp && pwd'" "/tmp"
+
+
+# tests IF
+
+run_test "if simple" "$BIN_PATH -c 'if echo hi; then echo ok; fi'" $'hi\nok'
+
+run_test "if else" "$BIN_PATH -c 'if false; then echo nope; else echo yep; fi'" "yep"
+
+run_test "if elif else" "$BIN_PATH -c 'if false; then echo nope; elif true; then echo middle; else echo nope; fi'" "middle"
+
+run_test "if with multiple commands in then" "$BIN_PATH -c 'if true; then echo a; echo b; fi'" $'a\nb'
+
