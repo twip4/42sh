@@ -46,4 +46,25 @@ fi
 echo "functional:"
 run_test "echo simple" "$BIN_PATH -c 'echo toto'" "toto"
 run_test "echo with quotes" "$BIN_PATH -c 'echo \"Toto | tata\"'" "Toto | tata"
+
+# Redirects tests
+
+run_test "redirect output >" "$BIN_PATH -c 'echo hello > out.txt; cat out.txt'" "hello"
+echo "" > out.txt
+
+run_test "redirect append >>" "$BIN_PATH -c 'echo first >> out.txt; echo second >> out.txt; cat out.txt'" $'first\nsecond'
+
+echo "input test" > in.txt
+
+run_test "redirect input <" "$BIN_PATH -c 'cat < in.txt'" "input test"
+
+run_test "pipe" "$BIN_PATH -c 'echo toto | tr a-z A-Z'" "TOTO"
+
+run_test "dup output >&" "$BIN_PATH -c 'echo err >&2'" ""
+
+echo "dup input test" > in.txt
+
+run_test "dup input <&" "$BIN_PATH -c 'cat <&0 < in.txt'" "dup input test"
+
+run_test "read/write <>" "$BIN_PATH -c 'echo rw test <> rw.txt; cat rw.txt'" "rw test"
 run_test "cd and pwd" "$BIN_PATH -c 'cd /tmp && pwd'" "/tmp"

@@ -1,14 +1,16 @@
-#include "parser.h"
-
+#define _POSIX_C_SOURCE 200809L
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "parser.h"
+#include "./commands/commands.h"
 
 ASTNode *parser_command(token **current);
 ASTNode *parser_logique(token **current);
 ASTNode *parser_pipe(token **current);
 ASTNode *parser_redirect(token **current);
 ASTNode *parser_subshell(token **current);
-ASTNode *parser_if(token **current);
 
 ASTNode *parser(token *tokens)
 {
@@ -71,16 +73,21 @@ ASTNode *parser_redirect(token **current)
                || (*current)->type == TOK_READ_WRITE
                || (*current)->type == TOK_REDIR_PIPE))
     {
+        token_type mode = (*current)->type;
         *current = (*current)->next;
+
+        if (!*current || (*current)->type != TOK_WORDS)
+        {
+            fprintf(stderr, "pas de filename\n");
+            return next;
+        }
 
         ASTNode *node = new_node();
         node->type = AST_REDIRECT;
-        node->data.redirect.mode = (*current)->type;
-        node->data.redirect.cmd = node;
-        node->data.redirect.filename = (*current)->value;
-
-        if ((*current)->type != TOK_WORDS)
-            printf("missing filename\n");
+        node->data.redirect.mode = mode;
+        //node->data.redirect.filename = (*current)->value;
+        node->data.redirect.filename = strdup((*current)->value);
+        node->data.redirect.cmd = next;
 
         *current = (*current)->next;
         next = node;
@@ -125,7 +132,8 @@ ASTNode *parser_command(token **current)
     {
         node->data.command.argv =
             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
-        node->data.command.argv[argc++] = (*current)->value;
+        //node->data.command.argv[argc++] = (*current)->value;
+        node->data.command.argv[argc++] = strdup((*current)->value);
 
         *current = (*current)->next;
     }
@@ -136,84 +144,6 @@ ASTNode *parser_command(token **current)
     node->data.command.argv[argc] = NULL;
 
     node->data.command.len = argc;
-
-    return node;
-}
-
-void skip_semicolons(token **current)
-{
-    while (*current && (*current)->type == TOK_POINT_VIRGULE)
-    {
-        *current = (*current)->next;
-    }
-}
-
-ASTNode *parser_if(token **current)
-{
-    if (!current || !*current || (*current)->type != TOK_IF)
-        return NULL;
-
-    ASTNode *node = new_node();
-    node->type = AST_IF;
-    node->data.ifnode.branches = NULL;
-    node->data.ifnode.blocelse = NULL;
-
-    IfBranch *last_branch = NULL;
-
-    while (*current)
-    {
-        token_type t = (*current)->type;
-
-        if (t == TOK_IF || t == TOK_ELIF)
-        {
-            *current = (*current)->next;
-
-            ASTNode *condition = parser_logique(current);
-
-            while (*current && (*current)->type == TOK_POINT_VIRGULE)
-            {
-                *current = (*current)->next;
-            }
-
-            if (!*current || (*current)->type != TOK_THEN)
-            {
-                printf("parser_if: ya pas THEN\n");
-                return NULL;
-            }
-            *current = (*current)->next;
-
-            ASTNode *bloc = parser_logique(current);
-
-            skip_semicolons(current);
-
-            IfBranch *branch = malloc(sizeof(IfBranch));
-            branch->condition = condition;
-            branch->bloc = bloc;
-            branch->next = NULL;
-
-            if (!node->data.ifnode.branches)
-                node->data.ifnode.branches = branch;
-
-            else
-                last_branch->next = branch;
-
-            last_branch = branch;
-        }
-        else if (t == TOK_ELSE)
-        {
-            *current = (*current)->next;
-            node->data.ifnode.blocelse = parser_logique(current);
-
-            skip_semicolons(current);
-        }
-        else if (t == TOK_FI)
-        {
-            *current = (*current)->next;
-            break;
-        }
-        else
-            break;
-    }
 
     return node;
 }
