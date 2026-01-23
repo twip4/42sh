@@ -7,11 +7,12 @@
 
 #include "../../common.h"
 
-static int builtin_true(void);
-static int builtin_false(void);
-static int builtin_echo(char **argv);
+int builtin_true(void);
+int builtin_false(void);
+int builtin_echo(char **argv);
 int builtin_exit(void);
 int builtin_cd(char **argv);
+int builtin_export(char **argv);
 
 int executeur_de_builtins(char **argv)
 {
@@ -33,26 +34,29 @@ int executeur_de_builtins(char **argv)
     if (strcmp(argv[0], "cd") == 0)
         return builtin_cd(argv);
 
+    if (strcmp(argv[0], "export") == 0)
+        return builtin_export(argv);
+
     return -1; // BUILTIN PAS IMPLEMENTE
 }
 
 // TRUE
 
-static int builtin_true(void)
+int builtin_true(void)
 {
     return 0;
 }
 
 // FALSE
 
-static int builtin_false(void)
+int builtin_false(void)
 {
     return 1;
 }
 
 // ECHO
 
-static void echo_print(const char *s, int interpret)
+void echo_print(const char *s, int interpret)
 {
     for (int i = 0; s[i]; i++)
     {
@@ -76,7 +80,7 @@ static void echo_print(const char *s, int interpret)
     }
 }
 
-static int builtin_echo(char **argv)
+int builtin_echo(char **argv)
 {
     int i = 1;
     int newline = 1;
@@ -109,11 +113,15 @@ static int builtin_echo(char **argv)
     return 0;
 }
 
+// EXIT
+
 int builtin_exit(void)
 {
     run_tty = 0;
     return 0;
 }
+
+// CD
 
 int builtin_cd(char **argv)
 {
@@ -143,4 +151,55 @@ int builtin_cd(char **argv)
         free(current_pwd);
     }
     return 0;
+}
+
+int split_key_value(const char *str, char **key, char **value)
+{
+    char *split_point = strchr(str, '=');
+    if (!split_point || split_point == str)
+        return 0;
+
+    *key = strndup(str, split_point - str);
+    *value = strdup(split_point + 1);
+
+    return 1;
+}
+
+// EXPORT
+
+int builtin_export(char **argv)
+{
+    if (argv[1])
+    {
+        char *key = NULL;
+        char *value = NULL;
+
+        if (strcmp(argv[1], "-p") == 0)
+        {
+            if (argv[2])
+            {
+                if (!split_key_value(argv[2], &key, &value))
+                    return 1;
+                setenv(key, value, 1);
+            }
+            else
+                return 1;
+
+            printf("export %s=%s\n", key, value);
+        }
+        else
+        {
+            if (!split_key_value(argv[2], &key, &value))
+                return 1;
+            setenv(key, value, 1);
+        }
+
+        free(key);
+        free(value);
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
 }
