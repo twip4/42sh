@@ -1,5 +1,5 @@
-#DEFINE _POSIX_C_SOURCE 200809L
-
+#define _POSIX_C_SOURCE 200809L
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -73,16 +73,21 @@ ASTNode *parser_redirect(token **current)
                || (*current)->type == TOK_READ_WRITE
                || (*current)->type == TOK_REDIR_PIPE))
     {
+        token_type mode = (*current)->type;
         *current = (*current)->next;
+
+        if (!*current || (*current)->type != TOK_WORDS)
+        {
+            fprintf(stderr, "pas de filename\n");
+            return next;
+        }
 
         ASTNode *node = new_node();
         node->type = AST_REDIRECT;
-        node->data.redirect.mode = (*current)->type;
-        node->data.redirect.cmd = node;
-        node->data.redirect.filename = (*current)->value;
-
-        if ((*current)->type != TOK_WORDS)
-            printf("missing filename\n");
+        node->data.redirect.mode = mode;
+        //node->data.redirect.filename = (*current)->value;
+        node->data.redirect.filename = strdup((*current)->value);
+        node->data.redirect.cmd = next;
 
         *current = (*current)->next;
         next = node;
@@ -127,7 +132,8 @@ ASTNode *parser_command(token **current)
     {
         node->data.command.argv =
             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
-        node->data.command.argv[argc++] = (*current)->value;
+        //node->data.command.argv[argc++] = (*current)->value;
+        node->data.command.argv[argc++] = strdup((*current)->value);
 
         *current = (*current)->next;
     }

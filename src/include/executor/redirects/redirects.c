@@ -1,5 +1,12 @@
+#define _POSIX_C_SOURCE 200809L
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h> 
 
-static int redirect_input(const char *filename, int *saved_fd)
+int redirect_input(const char *filename, int *saved_fd)
 {
     int fd = open(filename, O_RDONLY);
     if (fd < 0)
@@ -13,7 +20,7 @@ static int redirect_input(const char *filename, int *saved_fd)
     return 0;
 }
 
-static int redirect_output(const char *filename, int *saved_fd)
+int redirect_output(const char *filename, int *saved_fd)
 {
     int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0)
@@ -27,7 +34,7 @@ static int redirect_output(const char *filename, int *saved_fd)
     return 0;
 }
 
-static int redirect_append(const char *filename, int *saved_fd)
+int redirect_append(const char *filename, int *saved_fd)
 {
     int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (fd < 0)
@@ -41,7 +48,7 @@ static int redirect_append(const char *filename, int *saved_fd)
     return 0;
 }
 
-static int redirect_pipe(const char *data, int *saved_fd)
+int redirect_pipe(const char *data, int *saved_fd)
 {
     int pipefd[2];
     if (pipe(pipefd) == -1)
@@ -64,7 +71,7 @@ static int redirect_pipe(const char *data, int *saved_fd)
     return 0;
 }
 
-static int redirect_dup_output(const char *fd_str, int *saved_fd)
+int redirect_dup_output(const char *fd_str, int *saved_fd)
 {
     int target_fd = atoi(fd_str);
     *saved_fd = dup(STDOUT_FILENO);
@@ -72,7 +79,7 @@ static int redirect_dup_output(const char *fd_str, int *saved_fd)
     return 0;
 }
 
-static int redirect_dup_input(const char *fd_str, int *saved_fd)
+int redirect_dup_input(const char *fd_str, int *saved_fd)
 {
     int source_fd = atoi(fd_str);
     *saved_fd = dup(STDIN_FILENO);
@@ -80,7 +87,7 @@ static int redirect_dup_input(const char *fd_str, int *saved_fd)
     return 0;
 }
 
-static int redirect_read_write(const char *filename, int *saved_fd)
+int redirect_read_write(const char *filename, int *saved_fd)
 {
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
     if (fd < 0)

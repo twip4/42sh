@@ -134,6 +134,23 @@ static int executeur_de_subshell(ASTNode *node)
     return WEXITSTATUS(status);
 }
 
+
+
+static void restore_fds(int saved_stdin, int saved_stdout)
+{
+    if (saved_stdin != -1)
+    {
+        dup2(saved_stdin, STDIN_FILENO);
+        close(saved_stdin);
+    }
+    if (saved_stdout != -1)
+    {
+        dup2(saved_stdout, STDOUT_FILENO);
+        close(saved_stdout);
+    }
+}
+
+
 static int executeur_de_redirect(ASTNode *node)
 {
     if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
@@ -185,20 +202,6 @@ static int executeur_de_redirect(ASTNode *node)
     return status;
 }
 
-
-static void restore_fds(int saved_stdin, int saved_stdout)
-{
-    if (saved_stdin != -1)
-    {
-        dup2(saved_stdin, STDIN_FILENO);
-        close(saved_stdin);
-    }
-    if (saved_stdout != -1)
-    {
-        dup2(saved_stdout, STDOUT_FILENO);
-        close(saved_stdout);
-    }
-}
 
 
 
