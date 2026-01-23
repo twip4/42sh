@@ -67,3 +67,4 @@ echo "dup input test" > in.txt
 run_test "dup input <&" "$BIN_PATH -c 'cat <&0 < in.txt'" "dup input test"
 
 run_test "read/write <>" "$BIN_PATH -c 'echo rw test <> rw.txt; cat rw.txt'" "rw test"
+run_test "cd and pwd" "$BIN_PATH -c 'cd /tmp && pwd'" "/tmp"

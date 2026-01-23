@@ -64,13 +64,44 @@ int expand_ast(ASTNode *ast)
     return 1;
 }
 
+char *extract_var(char *s) // TODO: better implem
+{
+    if (s[0] == '$')
+    {
+        if (s[1] == '{')
+        {
+            char *var_end = strchr(s + 2, '}');
+            if (!var_end)
+                return NULL;
+
+            return strndup(s + 2, var_end - (s + 2));
+        }
+        else
+        {
+            int len = 1;
+
+            while (s[len] != '\0' && s[len] >= 'A' && s[len] <= 'Z')
+                len++;
+
+            return strndup(s + 1, len);
+        }
+    }
+    else
+        return NULL;
+}
+
 int expand_variable(char **s, int len)
 {
     for (int i = 0; i < len; i++)
     {
         if (s[i][0] == '$')
         {
-            char *var = getenv(s[i] + 1);
+            char *name = extract_var(s[i]);
+
+            if (!name)
+                continue;
+
+            char *var = getenv(name);
 
             if (var)
             {
@@ -78,8 +109,10 @@ int expand_variable(char **s, int len)
             }
             else
             {
-                return expand_special(s, i);
+                expand_special(s, i);
             }
+
+            free(name);
         }
     }
     return 1;
