@@ -1,10 +1,9 @@
-#define _POSIX_C_SOURCE 200809L
-#include <stdlib.h>
-#include <string.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h> 
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 int redirect_input(const char *filename, int *saved_fd)
 {

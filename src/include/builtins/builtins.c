@@ -14,6 +14,8 @@ int builtin_exit(void);
 int builtin_cd(char **argv);
 int builtin_export(char **argv);
 
+extern ShellState g_shell;
+
 int executeur_de_builtins(char **argv)
 {
     if (!argv || !argv[0])
@@ -117,7 +119,7 @@ int builtin_echo(char **argv)
 
 int builtin_exit(void)
 {
-    run_tty = 0;
+    g_shell.run_tty = 0;
     return 0;
 }
 

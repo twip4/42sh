@@ -13,6 +13,8 @@ int expand_variable(char **s, int len);
 int expand_special(char **argv, int i);
 char *concat_argv(char **argv, int len);
 
+extern ShellState g_shell;
+
 void replace_var(char **argv, int i, char *var)
 {
     argv[i] = strdup(var);
@@ -49,6 +51,7 @@ int expand_ast(ASTNode *ast)
     case AST_PIPE:
     case AST_AND:
     case AST_OR:
+    case AST_CHAIN:
         return expand_ast(ast->data.child.left)
             && expand_ast(ast->data.child.right);
         break;
@@ -59,6 +62,9 @@ int expand_ast(ASTNode *ast)
         if (!expand_if_branches(ast->data.ifnode.branches))
             return 0;
         return expand_ast(ast->data.ifnode.blocelse);
+
+    default:
+        return 0;
     }
 
     return 1;
@@ -118,67 +124,107 @@ int expand_variable(char **s, int len)
     return 1;
 }
 
+int expand_status(char **argv, int i)
+{
+    if (strcmp(argv[i], "$?"))
+        return 0;
+
+    char str[16];
+    sprintf(str, "%d", g_shell.last_return_code);
+    replace_var(argv, i, str);
+    return 1;
+}
+
+int expand_pid(char **argv, int i)
+{
+    if (strcmp(argv[i], "$$"))
+        return 0;
+
+    char str[32];
+    sprintf(str, "%d", getpid());
+    replace_var(argv, i, str);
+    return 1;
+}
+
+int expand_argv_all(char **argv, int i)
+{
+    if (strcmp(argv[i], "$*") && strcmp(argv[i], "$@"))
+        return 0;
+
+    char *str = concat_argv(argv, i);
+    if (str)
+    {
+        replace_var(argv, i, str);
+        free(str);
+    }
+    return 1;
+}
+
+int expand_argc(char **argv, int i)
+{
+    if (strcmp(argv[i], "$#"))
+        return 0;
+
+    char str[16];
+    sprintf(str, "%d", i);
+    replace_var(argv, i, str);
+    return 1;
+}
+
+int expand_random(char **argv, int i)
+{
+    if (strcmp(argv[i], "$RANDOM"))
+        return 0;
+
+    char str[16];
+    sprintf(str, "%d", rand());
+    replace_var(argv, i, str);
+    return 1;
+}
+
+int expand_uid(char **argv, int i)
+{
+    if (strcmp(argv[i], "$UID"))
+        return 0;
+
+    char str[32];
+    sprintf(str, "%d", getuid());
+    replace_var(argv, i, str);
+    return 1;
+}
+
+int expand_positional(char **argv, int i)
+{
+    if (argv[i][0] != '$' || argv[i][1] < '0' || argv[i][1] > '9')
+        return 0;
+
+    int idx = argv[i][1] - '0';
+    if (!argv[idx])
+        replace_var(argv, i, "");
+    else
+        replace_var(argv, i, argv[idx]);
+
+    return 1;
+}
+
 int expand_special(char **argv, int i)
 {
-    if (!strcmp(argv[i], "$?")) // valeur de retour
-    {
-        char str[10] = "";
-        sprintf(str, "%d", last_return_code);
-        replace_var(argv, i, str);
+    if (expand_status(argv, i))
         return 1;
-    }
-    else if (!strcmp(argv[i], "$$")) // pid du shell
-    {
-        pid_t shell_pid = getpid();
-        char str[50] = "";
-        sprintf(str, "%d", shell_pid);
-        replace_var(argv, i, str);
+    if (expand_pid(argv, i))
         return 1;
-    }
-    else if (!strcmp(argv[i], "$*")
-             || !strcmp(argv[i], "$@")) // concat of all argv
-    {
-        char *str = concat_argv(argv, i);
-        if (str)
-        {
-            replace_var(argv, i, str);
-            free(str);
-        }
+    if (expand_argv_all(argv, i))
         return 1;
-    }
-    else if (!strcmp(argv[i], "$#")) // number of argv
-    {
-        char str[50] = "";
-        sprintf(str, "%d", i);
-        replace_var(argv, i, str);
+    if (expand_argc(argv, i))
         return 1;
-    }
-    else if (!strcmp(argv[i], "$RANDOM")) // random int32
-    {
-        int tmp = rand();
-        char str[10] = "";
-        sprintf(str, "%d", tmp);
-        replace_var(argv, i, str);
+    if (expand_random(argv, i))
         return 1;
-    }
-    else if (!strcmp(argv[i], "$UID")) // uid user
-    {
-        uid_t uid = getuid();
-        char str[50] = "";
-        sprintf(str, "%d", uid);
-        replace_var(argv, i, str);
+    if (expand_uid(argv, i))
         return 1;
-    }
-    else if (argv[i][0] == '$'
-             && (argv[i][1] >= '0' && argv[i][1] <= '9')) // value at argv index
-    {
-        replace_var(argv, i, argv[argv[i][1] - '0']);
+    if (expand_positional(argv, i))
         return 1;
-    }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 char *concat_argv(char **argv, int len)

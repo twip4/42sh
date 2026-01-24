@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,118 +11,119 @@
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
-int last_return_code = 0;
-int run_tty = 1;
+ShellState g_shell = { 0, 1 };
 
-int main(int argc, char *argv[])
+FILE *get_input(int argc, char *argv[])
 {
     FILE *input = NULL;
-    int tty;
 
     if (argc >= 2 && strcmp(argv[1], "-c") == 0)
     {
         if (argc < 3)
         {
             fprintf(stderr, "42sh: option -c manque argument\n");
-            return 1;
+            return NULL;
         }
-
         input = fmemopen(argv[2], strlen(argv[2]), "r");
         if (!input)
-        {
             perror("fmemopen");
-            return 1;
-        }
     }
     else if (argc >= 2)
     {
         input = fopen(argv[1], "r");
         if (!input)
-        {
             perror(argv[1]);
-            return 1;
-        }
     }
     else
-    {
         input = stdin;
+
+    return input;
+}
+
+int execution_chain(char *line)
+{
+    if (!line || line[0] == '\n')
+        return 1;
+
+    token *tokens = lexer(line);
+    if (!tokens)
+        return 0;
+
+    ASTNode *ast = parser(tokens);
+    if (!ast)
+        goto error;
+
+    if (!expand_ast(ast))
+        goto error;
+
+    g_shell.last_return_code = l_executeur_d_ast(ast);
+
+    token_free_all(tokens);
+    free_ast(ast);
+    clear_garbage();
+    return 1;
+
+error:
+    token_free_all(tokens);
+    clear_garbage();
+    return 0;
+}
+
+void shell_loop(FILE *input)
+{
+    char *line = NULL;
+    size_t len = 0;
+    int tty = isatty(fileno(input));
+
+    while (g_shell.run_tty)
+    {
+        if (tty)
+        {
+            printf("42sh>");
+            fflush(stdout);
+        }
+
+        if (getline(&line, &len, input) == -1)
+            break;
+
+        if (!execution_chain(line))
+            break;
     }
 
-    tty = isatty(fileno(input));
+    free(line);
+}
 
+int file_exection(FILE *input)
+{
     char *line = NULL;
     size_t len = 0;
 
+    if (getline(&line, &len, input) == -1)
+        return 0;
+
+    int ret = execution_chain(line);
+    free(line);
+    return ret;
+}
+
+int main(int argc, char *argv[])
+{
+    FILE *input = get_input(argc, argv);
+    if (!input)
+        goto error;
+
     if (input == stdin)
-    {
-        while (run_tty)
-        {
-            if (tty)
-            {
-                printf("42sh>");
-                fflush(stdout);
-            }
-            ssize_t r = getline(&line, &len, input);
-            if (r == -1)
-                break;
-
-            token *tokens = lexer(line);
-            if (!tokens)
-                goto error;
-
-            ASTNode *ast = parser(tokens);
-            if (!ast)
-                goto error;
-
-            if (!expand_ast(ast))
-                goto error;
-
-            // ast_pretty_print(ast, 0);
-
-            last_return_code = l_executeur_d_ast(ast);
-
-            token_free_all(tokens);
-            free_ast(ast);
-            clear_garbage();
-        }
-
-        free(line);
-        line = NULL;
-    }
-    else
-    {
-        ssize_t r = getline(&line, &len, input);
-        if (r == -1)
-            goto error;
-
-        token *tokens = lexer(line);
-        if (!tokens)
-            goto error;
-
-        ASTNode *ast = parser(tokens);
-        if (!ast)
-            goto error;
-
-        ast_pretty_print(ast, 0);
-
-        last_return_code = l_executeur_d_ast(ast);
-
-        token_free_all(tokens);
-        free_ast(ast);
-        clear_garbage();
-    }
+        shell_loop(input);
+    else if (!file_exection(input))
+        goto error;
 
     if (input != stdin)
-    {
         fclose(input);
-        // pour fmemopen et fopen. pas besoin pour stdin c'est gere par le
-        // systeme
-    }
 
     return 0;
 
 error:
-    fprintf(stderr, "error \n");
+    fprintf(stderr, "error\n");
     clear_garbage();
     return 1;
 }

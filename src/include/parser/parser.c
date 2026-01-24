@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
 #include "parser.h"
 
 #include <stdio.h>
@@ -12,11 +11,33 @@ ASTNode *parser_logique(token **current);
 ASTNode *parser_pipe(token **current);
 ASTNode *parser_redirect(token **current);
 ASTNode *parser_subshell(token **current);
+ASTNode *parser_sequence(token **current);
 
 ASTNode *parser(token *tokens)
 {
     token *current = tokens->next;
-    return parser_logique(&current);
+    return parser_sequence(&current);
+}
+
+ASTNode *parser_sequence(token **current)
+{
+    ASTNode *left = parser_logique(current);
+
+    while (*current && (*current)->type == TOK_POINT_VIRGULE)
+    {
+        *current = (*current)->next;
+
+        ASTNode *right = parser_logique(current);
+
+        ASTNode *node = new_node();
+        node->type = AST_CHAIN;
+        node->data.child.left = left;
+        node->data.child.right = right;
+
+        left = node;
+    }
+
+    return left;
 }
 
 ASTNode *parser_logique(token **current)

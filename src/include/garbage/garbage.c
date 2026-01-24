@@ -23,7 +23,7 @@ void add_garbage(void *ptr)
     }
 }
 
-void clear_garbage()
+void clear_garbage(void)
 {
     if (!garbage)
         return;

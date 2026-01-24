@@ -1,10 +1,8 @@
-#define _POSIX_C_SOURCE 200809L
 #include "executor.h"
 
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -41,6 +39,9 @@ int l_executeur_d_ast(ASTNode *node)
         return executeur_de_subshell(node);
     case AST_IF:
         return executeur_de_if(node);
+    case AST_CHAIN:
+        l_executeur_d_ast(node->data.child.left);
+        return l_executeur_d_ast(node->data.child.right);
     default:
         fprintf(stderr, "l executeur  ast: type de noeud %d NOT IMPLEMENTED\n",
                 node->type);
@@ -122,7 +123,6 @@ static int executeur_de_OR(ASTNode *node)
     return status;
 }
 
-
 static int executeur_de_subshell(ASTNode *node)
 {
     pid_t pid = fork();
@@ -133,8 +133,6 @@ static int executeur_de_subshell(ASTNode *node)
     waitpid(pid, &status, 0);
     return WEXITSTATUS(status);
 }
-
-
 
 static void restore_fds(int saved_stdin, int saved_stdout)
 {
@@ -149,7 +147,6 @@ static void restore_fds(int saved_stdin, int saved_stdout)
         close(saved_stdout);
     }
 }
-
 
 static int executeur_de_redirect(ASTNode *node)
 {
@@ -201,9 +198,6 @@ static int executeur_de_redirect(ASTNode *node)
 
     return status;
 }
-
-
-
 
 static int executeur_de_if(ASTNode *node)
 {

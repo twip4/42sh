@@ -12,3 +12,4 @@ int redirect_dup_input(const char *fd_str, int *saved_fd);
 int redirect_read_write(const char *filename, int *saved_fd);
 
 #endif // REDIRECTS_H
+

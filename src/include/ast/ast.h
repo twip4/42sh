@@ -13,6 +13,7 @@ typedef enum
     AST_OR, // ||
     AST_REDIRECT, // > < >>
     AST_SUBSHELL, // ( ... )
+    AST_CHAIN,
     AST_IF
 } ASTNodeType;
 
@@ -62,7 +63,7 @@ typedef struct ASTNode
     } data;
 } ASTNode;
 
-ASTNode *new_node();
+ASTNode *new_node(void);
 void ast_pretty_print(ASTNode *node, int depth);
 void free_ast(ASTNode *node);
 

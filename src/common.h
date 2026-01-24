@@ -1,7 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-extern int last_return_code;
-extern int run_tty;
+typedef struct ShellState
+{
+    int last_return_code;
+    int run_tty;
+} ShellState;
 
 #endif // COMMON_H
