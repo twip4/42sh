@@ -11,15 +11,15 @@ ASTNode *parser_logique(token **current);
 ASTNode *parser_pipe(token **current);
 ASTNode *parser_redirect(token **current);
 ASTNode *parser_subshell(token **current);
-ASTNode *parser_sequence(token **current);
+ASTNode *parser_chain(token **current);
 
 ASTNode *parser(token *tokens)
 {
     token *current = tokens->next;
-    return parser_sequence(&current);
+    return parser_chain(&current);
 }
 
-ASTNode *parser_sequence(token **current)
+ASTNode *parser_chain(token **current)
 {
     ASTNode *left = parser_logique(current);
 
@@ -156,7 +156,6 @@ ASTNode *parser_command(token **current)
         node->data.command.argv =
             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
         node->data.command.argv[argc++] = (*current)->value;
-        // node->data.command.argv[argc++] = strdup((*current)->value);
 
         *current = (*current)->next;
     }

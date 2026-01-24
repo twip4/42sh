@@ -47,7 +47,7 @@ int execution_chain(char *line)
 
     token *tokens = lexer(line);
     if (!tokens)
-        return 0;
+        return 1;
 
     ASTNode *ast = parser(tokens);
     if (!ast)

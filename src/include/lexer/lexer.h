@@ -12,8 +12,6 @@ typedef enum
     TOK_FI,
     TOK_WHILE,
     TOK_FOR,
-    TOK_DO,
-    TOK_DONE,
     TOK_POINT_VIRGULE,
     TOK_NEWLINE,
     TOK_APOSTROPHE,
@@ -42,19 +40,7 @@ typedef struct token_struct
     struct token_struct *next;
 } token;
 
-token *token_init(void);
-token *token_new(token_type type, char *value);
-void token_add(token *head, token *token);
 void token_free_all(token *head);
-
-token_type check_keyword(char *word);
-int add_token(token *head, token_type type, char *value);
-char *read_word(char *input, int *i);
-int handle_symbol(char *s, int *i, token *tokens);
-int handle_simple_token(char c, int *i, token *tokens);
-int handle_escape(char *s, int *i, token *tokens);
-int skip_comment(char *s, int *i, int *simple_quote, int *double_quote);
-char *read_quoted(char *input, int *i);
 token *lexer(char *input_lx);
 
 #endif // LEXER_H

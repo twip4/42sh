@@ -11,13 +11,13 @@
 #include "../lexer/lexer.h"
 #include "./redirects/redirects.h"
 
-static int executeur_de_commande(ASTNode *node);
-static int executeur_de_pipe(ASTNode *node);
-static int executeur_de_AND(ASTNode *node);
-static int executeur_de_OR(ASTNode *node);
-static int executeur_de_redirect(ASTNode *node);
-static int executeur_de_subshell(ASTNode *node);
-static int executeur_de_if(ASTNode *node);
+int executeur_de_commande(ASTNode *node);
+int executeur_de_pipe(ASTNode *node);
+int executeur_de_AND(ASTNode *node);
+int executeur_de_OR(ASTNode *node);
+int executeur_de_redirect(ASTNode *node);
+int executeur_de_subshell(ASTNode *node);
+int executeur_de_if(ASTNode *node);
 
 int l_executeur_d_ast(ASTNode *node)
 {
@@ -49,7 +49,7 @@ int l_executeur_d_ast(ASTNode *node)
     }
 }
 
-static int executeur_de_commande(ASTNode *node)
+int executeur_de_commande(ASTNode *node)
 {
     int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
     if (builtin_fait_maison != -1)
@@ -70,7 +70,7 @@ static int executeur_de_commande(ASTNode *node)
     return WEXITSTATUS(status);
 }
 
-static int executeur_de_pipe(ASTNode *node)
+int executeur_de_pipe(ASTNode *node)
 {
     int fd[2];
     if (pipe(fd) == -1)
@@ -107,7 +107,7 @@ static int executeur_de_pipe(ASTNode *node)
     return WEXITSTATUS(status);
 }
 
-static int executeur_de_AND(ASTNode *node)
+int executeur_de_AND(ASTNode *node)
 {
     int status = l_executeur_d_ast(node->data.child.left);
     if (status == 0)
@@ -115,7 +115,7 @@ static int executeur_de_AND(ASTNode *node)
     return status;
 }
 
-static int executeur_de_OR(ASTNode *node)
+int executeur_de_OR(ASTNode *node)
 {
     int status = l_executeur_d_ast(node->data.child.left);
     if (status != 0)
@@ -123,7 +123,7 @@ static int executeur_de_OR(ASTNode *node)
     return status;
 }
 
-static int executeur_de_subshell(ASTNode *node)
+int executeur_de_subshell(ASTNode *node)
 {
     pid_t pid = fork();
     if (pid == 0)
@@ -134,7 +134,7 @@ static int executeur_de_subshell(ASTNode *node)
     return WEXITSTATUS(status);
 }
 
-static void restore_fds(int saved_stdin, int saved_stdout)
+void restore_fds(int saved_stdin, int saved_stdout)
 {
     if (saved_stdin != -1)
     {
@@ -148,7 +148,7 @@ static void restore_fds(int saved_stdin, int saved_stdout)
     }
 }
 
-static int executeur_de_redirect(ASTNode *node)
+int executeur_de_redirect(ASTNode *node)
 {
     if (!node || node->type != AST_REDIRECT || !node->data.redirect.cmd)
         return 1;
@@ -199,7 +199,7 @@ static int executeur_de_redirect(ASTNode *node)
     return status;
 }
 
-static int executeur_de_if(ASTNode *node)
+int executeur_de_if(ASTNode *node)
 {
     IfBranch *branch = node->data.ifnode.branches;
 
