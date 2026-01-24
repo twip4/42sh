@@ -11,7 +11,7 @@
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
-ShellState g_shell = { 0, 1 };
+ShellState g_shell = { 0, 1, NULL };
 
 FILE *get_input(int argc, char *argv[])
 {
