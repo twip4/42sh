@@ -51,7 +51,10 @@ int execution_chain(char *line)
 
     ASTNode *ast = parser(tokens);
     if (!ast)
+    {
+        fprintf(stderr, "syntax error !\n");
         goto error;
+    }
 
     if (!expand_ast(ast))
         goto error;
@@ -87,7 +90,7 @@ void shell_loop(FILE *input)
             break;
 
         if (!execution_chain(line))
-            break;
+            continue;
     }
 
     free(line);
@@ -120,10 +123,10 @@ int main(int argc, char *argv[])
     if (input != stdin)
         fclose(input);
 
-    return 0;
+    return 1;
 
 error:
     fprintf(stderr, "error\n");
     clear_garbage();
-    return 1;
+    return 0;
 }

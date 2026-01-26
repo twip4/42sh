@@ -13,10 +13,19 @@ ASTNode *parser_redirect(token **current);
 ASTNode *parser_subshell(token **current);
 ASTNode *parser_chain(token **current);
 
+int error = 0;
+
 ASTNode *parser(token *tokens)
 {
     token *current = tokens->next;
-    return parser_chain(&current);
+    ASTNode *ast = parser_chain(&current);
+    if (error)
+    {
+        free_ast(ast);
+        error = 0;
+        return NULL;
+    }
+    return ast;
 }
 
 ASTNode *parser_chain(token **current)
@@ -43,6 +52,8 @@ ASTNode *parser_chain(token **current)
 ASTNode *parser_logique(token **current)
 {
     ASTNode *left = parser_pipe(current);
+    if (!left)
+        error = 1;
 
     while (*current
            && ((*current)->type == TOK_AND || (*current)->type == TOK_OR))
@@ -51,6 +62,8 @@ ASTNode *parser_logique(token **current)
         *current = (*current)->next;
 
         ASTNode *right = parser_pipe(current);
+        if (!right)
+            error = 1;
 
         ASTNode *node = new_node();
         node->type = (tmp == TOK_AND) ? AST_AND : AST_OR;
@@ -65,12 +78,16 @@ ASTNode *parser_logique(token **current)
 ASTNode *parser_pipe(token **current)
 {
     ASTNode *left = parser_redirect(current);
+    if (!left)
+        error = 1;
 
     while (*current && (*current)->type == TOK_PIPE)
     {
         *current = (*current)->next;
 
         ASTNode *right = parser_redirect(current);
+        if (!right)
+            error = 1;
 
         ASTNode *node = new_node();
         node->type = AST_PIPE;
@@ -120,7 +137,7 @@ ASTNode *parser_redirect(token **current)
 
 ASTNode *parser_subshell(token **current)
 {
-    if ((*current)->type == TOK_PARO)
+    if (*current && (*current)->type == TOK_PARO)
     {
         *current = (*current)->next;
 
@@ -129,8 +146,14 @@ ASTNode *parser_subshell(token **current)
         node->type = AST_SUBSHELL;
         node->data.subshell.child = parser_logique(current);
 
-        if ((*current)->type != TOK_PARC)
-            printf("error not close parenthese\n");
+        if ((*current)->type != TOK_PARC || !node->data.subshell.child)
+        {
+            fprintf(stderr, "error not close parenthese\n");
+            error = 1;
+        }
+
+        if (!node->data.subshell.child)
+            error = 1;
 
         *current = (*current)->next;
         return node;
@@ -160,7 +183,12 @@ ASTNode *parser_command(token **current)
         *current = (*current)->next;
     }
 
-    // tu mets pas de null a la fin gros con, ya que des segmentations fault
+    if (!argc)
+    {
+        free(node);
+        return NULL;
+    }
+
     node->data.command.argv =
         realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
     node->data.command.argv[argc] = NULL;

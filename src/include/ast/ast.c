@@ -39,6 +39,7 @@ void free_ast(ASTNode *node)
     case AST_PIPE:
     case AST_AND:
     case AST_OR:
+    case AST_CHAIN:
         free_ast(node->data.child.left);
         free_ast(node->data.child.right);
         break;
