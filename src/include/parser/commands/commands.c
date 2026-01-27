@@ -1,7 +1,10 @@
 #include "commands.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+
+extern int error;
 
 int skip_semicolons_et_retour_a_la_ligne(token **current);
 
@@ -111,14 +114,90 @@ int skip_semicolons_et_retour_a_la_ligne(token **current)
     return skipped;
 }
 
-ASTNode *parser_for(token **current) // parser for
+// parser for
+ASTNode *parser_for(token **current)
 {
-    (void)current;
-    return NULL;
-}
+    if (!current || !*current || (*current)->type != TOK_FOR)
+        return NULL;
 
-ASTNode *parser_while(token **current) // parser while
-{
-    (void)current;
-    return NULL;
+    // consume "for"
+    *current = (*current)->next;
+
+    // variable name
+    if (!*current || (*current)->type != TOK_WORDS)
+    {
+        fprintf(stderr, "for: expected variable name\n");
+        error = 1;
+        return NULL;
+    }
+
+    ASTNode *node = new_node();
+    node->type = AST_FOR;
+
+    node->data.fornode.var = strdup((*current)->value);
+    node->data.fornode.items = NULL;
+    node->data.fornode.items_len = 0;
+
+    *current = (*current)->next;
+
+    /* optional: in WORD ... */
+    if (*current && (*current)->type == TOK_WORDS
+        && strcmp((*current)->value, "in") == 0)
+    {
+        *current = (*current)->next;
+
+        while (*current && (*current)->type == TOK_WORDS)
+        {
+            node->data.fornode.items =
+                realloc(node->data.fornode.items,
+                        sizeof(char *) * (node->data.fornode.items_len + 1));
+
+            node->data.fornode.items[node->data.fornode.items_len++] =
+                strdup((*current)->value);
+
+            *current = (*current)->next;
+        }
+    }
+
+    // expect ; or newline
+    if (!skip_semicolons_et_retour_a_la_ligne(current))
+    {
+        fprintf(stderr, "for: expected newline or ;\n");
+        error = 1;
+        return NULL;
+    }
+
+    // expect "do"
+    if (!*current || (*current)->type != TOK_WORDS
+        || strcmp((*current)->value, "do") != 0)
+    {
+        fprintf(stderr, "for: expected do\n");
+        error = 1;
+        return NULL;
+    }
+
+    *current = (*current)->next;
+
+    // body
+    node->data.fornode.body = parser_logique(current);
+    if (!node->data.fornode.body)
+    {
+        error = 1;
+        return NULL;
+    }
+
+    skip_semicolons_et_retour_a_la_ligne(current);
+
+    // expect "done"
+    if (!*current || (*current)->type != TOK_WORDS
+        || strcmp((*current)->value, "done") != 0)
+    {
+        fprintf(stderr, "for: expected done\n");
+        error = 1;
+        return NULL;
+    }
+
+    *current = (*current)->next;
+
+    return node;
 }

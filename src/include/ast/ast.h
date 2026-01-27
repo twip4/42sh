@@ -14,7 +14,8 @@ typedef enum
     AST_REDIRECT, // > < >>
     AST_SUBSHELL, // ( ... )
     AST_CHAIN,
-    AST_IF
+    AST_IF,
+    AST_FOR
 } ASTNodeType;
 
 /*
@@ -79,6 +80,14 @@ typedef struct ASTNode
             IfBranch *branches;
             struct ASTNode *blocelse;
         } ifnode;
+
+        struct
+        {
+            char *var; // nom de la variable (ex: i)
+            char **items; // liste des mots après "in"
+            int items_len;
+            struct ASTNode *body; // body du for
+        } fornode;
 
     } data;
 } ASTNode;

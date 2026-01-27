@@ -18,6 +18,7 @@ Flag global d’erreur de parsing
 Permet d’annuler la construction de l’AST
 */
 int error = 0;
+// int error_code_sortie = 0; // 0 = ok, 2 = syntax error
 
 /*
 Point d’entrée du parser
@@ -28,6 +29,7 @@ ASTNode *parser(token *tokens)
     token *current = tokens->next; // On ignore le token HEAD
     ASTNode *ast =
         parser_chain(&current); // Parse la chaîne complète de commandes
+
     if (error) // En cas d’erreur, on libère l’AST
     {
         free_ast(ast);
@@ -191,6 +193,10 @@ ASTNode *parser_command(token **current)
     // regle IF
     if (*current && (*current)->type == TOK_IF)
         return parser_if(current);
+
+    // regle FOR
+    if (*current && (*current)->type == TOK_FOR)
+        return parser_for(current);
 
     ASTNode *node = new_node();
     node->type = AST_COMMAND;

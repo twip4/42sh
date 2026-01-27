@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -24,6 +25,7 @@ int executeur_de_OR(ASTNode *node);
 int executeur_de_redirect(ASTNode *node);
 int executeur_de_subshell(ASTNode *node);
 int executeur_de_if(ASTNode *node);
+int executeur_de_for(ASTNode *node);
 
 extern ShellState g_shell;
 
@@ -47,6 +49,8 @@ int l_executeur_d_ast(ASTNode *node)
         return executeur_de_subshell(node);
     case AST_IF:
         return executeur_de_if(node);
+    case AST_FOR:
+        return executeur_de_for(node);
     case AST_CHAIN:
         l_executeur_d_ast(node->data.child.left);
         return l_executeur_d_ast(node->data.child.right);
@@ -264,4 +268,36 @@ int executeur_de_if(ASTNode *node)
         return l_executeur_d_ast(node->data.ifnode.blocelse);
 
     return 0;
+}
+
+// execution de for
+int executeur_de_for(ASTNode *node)
+{
+    if (!node || node->type != AST_FOR)
+        return 1;
+
+    int status = 0;
+
+    // Si aucun "in", équivalent à "$@"
+    if (node->data.fornode.items_len == 0)
+    {
+        for (int i = 0; g_shell.argv && g_shell.argv[i]; i++)
+        {
+            setenv(node->data.fornode.var, g_shell.argv[i], 1);
+            status = l_executeur_d_ast(node->data.fornode.body);
+        }
+        return status;
+    }
+
+    // Boucle sur les items définis dans "in"
+    for (int i = 0; i < node->data.fornode.items_len; i++)
+    {
+        // Définit la variable de boucle dans l'environnement
+        setenv(node->data.fornode.var, node->data.fornode.items[i], 1);
+
+        // Exécute le corps de la boucle
+        status = l_executeur_d_ast(node->data.fornode.body);
+    }
+
+    return status;
 }
