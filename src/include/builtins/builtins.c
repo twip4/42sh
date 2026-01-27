@@ -14,6 +14,7 @@ int builtin_exit(void);
 int builtin_cd(char **argv);
 int builtin_export(char **argv);
 void clear_exports(void);
+int builtin_unset(char **argv);
 
 extern ShellState g_shell;
 
@@ -39,6 +40,9 @@ int executeur_de_builtins(char **argv)
 
     if (strcmp(argv[0], "export") == 0)
         return builtin_export(argv);
+
+    if (strcmp(argv[0], "unset") == 0)
+        return builtin_unset(argv);
 
     return -1; // BUILTIN PAS IMPLEMENTE
 }
@@ -244,4 +248,22 @@ int builtin_export(char **argv)
     {
         return 1;
     }
+}
+
+// UNSET
+
+int builtin_unset(char **argv) // rajouter les fonctions
+{
+    if (argv[1])
+    {
+        int i = 1;
+        while (argv[i])
+        {
+            unsetenv(argv[i]);
+            i++;
+        }
+        return 0;
+    }
+    fprintf(stderr, "invalid args\n");
+    return 1;
 }
