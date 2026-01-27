@@ -6,12 +6,11 @@
 #include "common.h"
 #include "include/ast/ast.h"
 #include "include/executor/executor.h"
-#include "include/expand/expand.h"
 #include "include/garbage/garbage.h"
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
-ShellState g_shell = { 0, 1, NULL };
+ShellState g_shell = { 0, 1, NULL, NULL, 0 };
 
 FILE *get_input(int argc, char *argv[])
 {
@@ -56,10 +55,7 @@ int execution_chain(char *line)
         goto error;
     }
 
-    if (!expand_ast(ast))
-        goto error;
-
-    g_shell.last_return_code = l_executeur_d_ast(ast);
+    l_executeur_d_ast(ast);
 
     token_free_all(tokens);
     free_ast(ast);

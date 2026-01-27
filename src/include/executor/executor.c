@@ -6,8 +6,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "../../common.h"
 #include "../ast/ast.h"
 #include "../builtins/builtins.h"
+#include "../expand/expand.h"
 #include "../lexer/lexer.h"
 #include "./redirects/redirects.h"
 
@@ -23,8 +25,9 @@ int executeur_de_redirect(ASTNode *node);
 int executeur_de_subshell(ASTNode *node);
 int executeur_de_if(ASTNode *node);
 
-int l_executeur_d_ast(ASTNode *node) // Fonction principale d’exécution de l’AST
-                                     // distribue en fonction du type de node
+extern ShellState g_shell;
+
+int l_executeur_d_ast(ASTNode *node)
 {
     if (node == NULL)
         return 0;
@@ -56,12 +59,15 @@ int l_executeur_d_ast(ASTNode *node) // Fonction principale d’exécution de l�
 
 int executeur_de_commande(ASTNode *node) // exécution de commande
 {
-    int builtin_fait_maison = executeur_de_builtins(
-        node->data.command.argv); // retourne -1 si le builtin n'est pas
-                                  // implémenté dans le fichier builtins.c
+    expand_variable(node->data.command.argv, node->data.command.len);
+
+    int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
     if (builtin_fait_maison != -1)
+    {
+        g_shell.last_return_code = builtin_fait_maison;
         return builtin_fait_maison;
-    // ouverture sous processus
+    }
+
     pid_t pid = fork();
 
     if (pid == 0)
@@ -74,8 +80,8 @@ int executeur_de_commande(ASTNode *node) // exécution de commande
 
     int status;
     waitpid(pid, &status, 0);
-    // retourne exit status du fork
-    return WEXITSTATUS(status);
+    g_shell.last_return_code = WEXITSTATUS(status);
+    return g_shell.last_return_code;
 }
 
 int executeur_de_pipe(ASTNode *node) // exécution d’un pipe (cmd1 | cmd2)

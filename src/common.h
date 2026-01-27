@@ -8,6 +8,8 @@ typedef struct ShellState
     int last_return_code;
     int run_tty;
     export_history *exports;
+    char **argv;
+    int argc;
 } ShellState;
 
 #endif // COMMON_H
