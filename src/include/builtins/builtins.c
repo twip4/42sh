@@ -74,7 +74,7 @@ void echo_print(const char *s, int interpret)
         if (interpret && s[i] == '\\')
         {
             i++;
-            if (s[i] == 'n')  // interprétation de \n 
+            if (s[i] == 'n') // interprétation de \n
                 putchar('\n');
             else if (s[i] == 't') // interprétation de \t
                 putchar('\t');
@@ -82,7 +82,7 @@ void echo_print(const char *s, int interpret)
                 putchar('\\');
             else
             {
-                putchar('\\'); 
+                putchar('\\');
                 putchar(s[i]);
             }
         }
@@ -102,11 +102,11 @@ int builtin_echo(char **argv)
         if (strcmp(argv[i], "-n") == 0)
             newline = 0; // pas de saut de ligne
         else if (strcmp(argv[i], "-e") == 0)
-            interpret = 1;  // interpréter les échappements
+            interpret = 1; // interpréter les échappements
         else if (strcmp(argv[i], "-E") == 0)
             interpret = 0; // ne pas interpréter
         else
-            break;  // autre option inconnue : fin des options
+            break; // autre option inconnue : fin des options
         i++;
     }
 
@@ -130,7 +130,7 @@ int builtin_echo(char **argv)
 int builtin_exit(void)
 {
     g_shell.run_tty = 0; // signal pour arrêter le shell
-    clear_exports();  // libération mémoire des exports
+    clear_exports(); // libération mémoire des exports
     return 0;
 }
 
@@ -247,19 +247,19 @@ int builtin_export(char **argv)
         else
         {
             if (!split_key_value(argv[1], &key, &value))
-                return 1;  // format invalide
+                return 1; // format invalide
             add_export(key); // ajouter à l'historique
             setenv(key, value, 1); // exporter dans l'environnement
         }
-        }
+    }
 
-        free(value); // libération mémoire
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
+    free(value); // libération mémoire
+    return 0;
+}
+else
+{
+    return 1;
+}
 }
 
 // UNSET
