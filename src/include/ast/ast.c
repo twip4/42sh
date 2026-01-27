@@ -2,51 +2,62 @@
 
 #include <stdlib.h>
 
+// Fonction pour créer un nouveau node AST
 ASTNode *new_node(void)
 {
     ASTNode *new = malloc(sizeof(ASTNode));
 
-    return new;
+    return new; // Retourne le pointeur vers le nouveau nœud
 }
 
+// Fonction pour libérer une liste chaînée de branches "if"
 void free_if_branches(IfBranch *branch)
 {
     IfBranch *next;
 
-    while (branch)
+    while (branch) // Parcours de toutes les branches
     {
-        next = branch->next;
+        next = branch->next; // Sauvegarde du prochain élément avant de libérer
 
-        free_ast(branch->condition);
-        free_ast(branch->bloc);
-        free(branch);
+        free_ast(branch->condition); // Libération du node AST de la condition
+        free_ast(
+            branch
+                ->bloc); // Libération du node AST du bloc associé à la branche
+        free(branch); // Libération de la structure IfBranch elle-même
 
         branch = next;
     }
 }
 
+// Fonction récursive pour libérer tout l'arbre AST
 void free_ast(ASTNode *node)
 {
     if (!node)
         return;
 
-    switch (node->type)
+    switch (
+        node->type) // Selon le type du nœud, libérer les ressources spécifiques
     {
     case AST_COMMAND:
-        free(node->data.command.argv);
+        free(node->data.command
+                 .argv); // Libération du tableau d'arguments pour une commande
         break;
 
     case AST_PIPE:
     case AST_AND:
     case AST_OR:
     case AST_CHAIN:
-        free_ast(node->data.child.left);
-        free_ast(node->data.child.right);
+        free_ast(
+            node->data.child.left); // Libération récursive du sous-arbre gauche
+        free_ast(
+            node->data.child.right); // Libération récursive du sous-arbre droit
         break;
 
     case AST_IF:
-        free_if_branches(node->data.ifnode.branches);
-        free_ast(node->data.ifnode.blocelse);
+        free_if_branches(
+            node->data.ifnode.branches); // Libération des branches if
+        free_ast(
+            node->data.ifnode.blocelse); // Libération du bloc "else" si présent
         break;
 
     case AST_REDIRECT:
@@ -55,11 +66,12 @@ void free_ast(ASTNode *node)
         break;
 
     case AST_SUBSHELL:
-        free_ast(node->data.subshell.child);
+        free_ast(node->data.subshell
+                     .child); // Libération récursive de l'arbre du sous-shell
         break;
     default:
         break;
     }
 
-    free(node);
+    free(node); // Enfin, libération du node lui-même
 }

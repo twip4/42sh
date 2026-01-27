@@ -242,7 +242,7 @@ int builtin_export(char **argv)
 
         if (strcmp(argv[1], "-p") == 0)
         {
-            print_exports(); // afficher tous les exports
+            print_exports();
         }
         else
         {
@@ -251,15 +251,14 @@ int builtin_export(char **argv)
             add_export(key); // ajouter à l'historique
             setenv(key, value, 1); // exporter dans l'environnement
         }
-    }
 
-    free(value); // libération mémoire
-    return 0;
-}
-else
-{
-    return 1;
-}
+        free(value); // libération mémoire
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 // UNSET
