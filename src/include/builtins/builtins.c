@@ -1,5 +1,6 @@
 #include "builtins.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,7 @@
 int builtin_true(void);
 int builtin_false(void);
 int builtin_echo(char **argv);
-int builtin_exit(void);
+int builtin_exit(char **argv);
 int builtin_cd(char **argv);
 int builtin_export(char **argv);
 void clear_exports(void);
@@ -36,7 +37,7 @@ int executeur_de_builtins(char **argv)
         return builtin_echo(argv);
 
     if (strcmp(argv[0], "exit") == 0)
-        return builtin_exit();
+        return builtin_exit(argv);
 
     if (strcmp(argv[0], "cd") == 0)
         return builtin_cd(argv);
@@ -127,11 +128,51 @@ int builtin_echo(char **argv)
 
 // EXIT
 
-int builtin_exit(void)
+int is_number(char *s)
 {
-    g_shell.run_tty = 0; // signal pour arrêter le shell
-    clear_exports(); // libération mémoire des exports
-    return 0;
+    int i = 0;
+    while (s[i] != '\0')
+    {
+        if (!isdigit(s[i]))
+            return 0;
+        i++;
+    }
+    return 1;
+}
+
+int builtin_exit(char **argv)
+{
+    long return_code;
+
+    if (argv[1] && argv[2])
+    {
+        fprintf(stderr, "too many arguments\n");
+        return 1;
+    }
+
+    if (argv[1])
+    {
+        if (!is_number(argv[1]))
+        {
+            fprintf(stderr, "exit %s is not numeric arguments\n", argv[1]);
+            return_code = 2;
+        }
+        else
+            return_code = atoi(argv[1]);
+    }
+    else
+        return_code = g_shell.last_return_code;
+
+    if (g_shell.is_interactive && !g_shell.is_subshell)
+        printf("exit\n");
+
+    clear_exports();
+    // clean_shell(); TODO:
+
+    if (g_shell.is_subshell)
+        _exit(return_code);
+    else
+        exit(return_code);
 }
 
 // CD

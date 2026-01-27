@@ -167,7 +167,7 @@ ASTNode *parser_subshell(token **current)
         ASTNode *node = new_node();
 
         node->type = AST_SUBSHELL;
-        node->data.subshell.child = parser_logique(
+        node->data.subshell.child = parser_chain(
             current); // Le contenu du sous-shell est une expression logique
 
         if ((*current)->type != TOK_PARC
