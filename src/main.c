@@ -6,7 +6,6 @@
 #include "common.h"
 #include "include/ast/ast.h"
 #include "include/executor/executor.h"
-#include "include/expand/expand.h"
 #include "include/garbage/garbage.h"
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
