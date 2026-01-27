@@ -11,6 +11,10 @@
 #include "../lexer/lexer.h"
 #include "./redirects/redirects.h"
 
+/*
+Prototypes des fonctions d’exécution
+Chaque fonction gère un type précis de node AST
+*/
 int executeur_de_commande(ASTNode *node);
 int executeur_de_pipe(ASTNode *node);
 int executeur_de_AND(ASTNode *node);
@@ -19,7 +23,8 @@ int executeur_de_redirect(ASTNode *node);
 int executeur_de_subshell(ASTNode *node);
 int executeur_de_if(ASTNode *node);
 
-int l_executeur_d_ast(ASTNode *node)
+int l_executeur_d_ast(ASTNode *node) // Fonction principale d’exécution de l’AST
+                                     // distribue en fonction du type de node
 {
     if (node == NULL)
         return 0;
@@ -49,12 +54,14 @@ int l_executeur_d_ast(ASTNode *node)
     }
 }
 
-int executeur_de_commande(ASTNode *node)
+int executeur_de_commande(ASTNode *node) // exécution de commande
 {
-    int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
+    int builtin_fait_maison = executeur_de_builtins(
+        node->data.command.argv); // retourne -1 si le builtin n'est pas
+                                  // implémenté dans le fichier builtins.c
     if (builtin_fait_maison != -1)
         return builtin_fait_maison;
-
+    // ouverture sous processus
     pid_t pid = fork();
 
     if (pid == 0)
@@ -67,10 +74,11 @@ int executeur_de_commande(ASTNode *node)
 
     int status;
     waitpid(pid, &status, 0);
+    // retourne exit status du fork
     return WEXITSTATUS(status);
 }
 
-int executeur_de_pipe(ASTNode *node)
+int executeur_de_pipe(ASTNode *node) // exécution d’un pipe (cmd1 | cmd2)
 {
     int fd[2];
     if (pipe(fd) == -1)
@@ -78,6 +86,7 @@ int executeur_de_pipe(ASTNode *node)
         perror("pipe");
         return 1;
     }
+    // processus gauche : écrit dans le pipe
 
     pid_t left = fork();
     if (left == 0)
@@ -88,6 +97,7 @@ int executeur_de_pipe(ASTNode *node)
         _exit(l_executeur_d_ast(node->data.child.left));
     }
 
+    // processus droit : lit depuis le pipe
     pid_t right = fork();
     if (right == 0)
     {
@@ -96,6 +106,8 @@ int executeur_de_pipe(ASTNode *node)
         close(fd[0]);
         _exit(l_executeur_d_ast(node->data.child.right));
     }
+
+    // retour dans le processus parent
 
     close(fd[0]);
     close(fd[1]);
@@ -107,7 +119,7 @@ int executeur_de_pipe(ASTNode *node)
     return WEXITSTATUS(status);
 }
 
-int executeur_de_AND(ASTNode *node)
+int executeur_de_AND(ASTNode *node) // exécution condition AND
 {
     int status = l_executeur_d_ast(node->data.child.left);
     if (status == 0)
@@ -115,7 +127,7 @@ int executeur_de_AND(ASTNode *node)
     return status;
 }
 
-int executeur_de_OR(ASTNode *node)
+int executeur_de_OR(ASTNode *node) // exécution condition OR
 {
     int status = l_executeur_d_ast(node->data.child.left);
     if (status != 0)
@@ -127,26 +139,39 @@ int executeur_de_subshell(ASTNode *node)
 {
     pid_t pid = fork();
     if (pid == 0)
-        _exit(l_executeur_d_ast(node->data.subshell.child));
+        _exit(l_executeur_d_ast(
+            node->data.subshell.child)); // execute le subshell en appelant la
+                                         // mthode principale sur le noeud fils
 
     int status;
     waitpid(pid, &status, 0);
+    // code exit du fork
     return WEXITSTATUS(status);
 }
 
-void restore_fds(int saved_stdin, int saved_stdout)
+void restore_fds(int saved_stdin,
+                 int saved_stdout) // permet de rebrancher correctement les
+                                   // canaux stdin et stdout
 {
     if (saved_stdin != -1)
     {
-        dup2(saved_stdin, STDIN_FILENO);
-        close(saved_stdin);
+        dup2(saved_stdin,
+             STDIN_FILENO); // redirige la sortie vers le stdin d'origine
+        close(saved_stdin); // ferme l'ancien stdin
     }
     if (saved_stdout != -1)
     {
-        dup2(saved_stdout, STDOUT_FILENO);
+        dup2(saved_stdout, STDOUT_FILENO); // meme processus mais pour stdout
         close(saved_stdout);
     }
 }
+
+/*
+fonction principale pour l'exécution des redirects
+- applique la redirection
+- exécute la commande
+- restaure les fd
+*/
 
 int executeur_de_redirect(ASTNode *node)
 {
@@ -156,6 +181,12 @@ int executeur_de_redirect(ASTNode *node)
     int saved_stdin = -1;
     int saved_stdout = -1;
     int result = 0;
+
+    /*
+    le switch redirige en fonction du type de redirect (définis dans le lexer)
+    les fonctions redirect_input,... sont implementées dans le fichier
+    redirect.c
+    */
 
     switch (node->data.redirect.mode)
     {
@@ -187,22 +218,32 @@ int executeur_de_redirect(ASTNode *node)
         return 1;
     }
 
-    if (result != 0)
+    if (result != 0) // En cas d’erreur, on restaure et on quitte
     {
-        restore_fds(saved_stdin, saved_stdout);
+        restore_fds(saved_stdin,
+                    saved_stdout); // on utilise restore_fds pour restorer stdin
+                                   // et stdout (modifiés pendant l'execution
+                                   // des redirects)
         return 1;
     }
 
-    int status = l_executeur_d_ast(node->data.redirect.cmd);
-    restore_fds(saved_stdin, saved_stdout);
+    int status =
+        l_executeur_d_ast(node->data.redirect.cmd); // execute la commande
+    restore_fds(
+        saved_stdin,
+        saved_stdout); // on utilise restore_fds pour restorer stdin et stdout
+                       // (modifiés pendant l'execution des redirects)
 
     return status;
 }
+
+// exécution d’un if / elif / else
 
 int executeur_de_if(ASTNode *node)
 {
     IfBranch *branch = node->data.ifnode.branches;
 
+    // Parcourt les branches if / elif
     while (branch)
     {
         int status = l_executeur_d_ast(branch->condition);
@@ -212,7 +253,7 @@ int executeur_de_if(ASTNode *node)
 
         branch = branch->next;
     }
-
+    // exécution du else s’il existe
     if (node->data.ifnode.blocelse)
         return l_executeur_d_ast(node->data.ifnode.blocelse);
 

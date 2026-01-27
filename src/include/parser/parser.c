@@ -13,13 +13,22 @@ ASTNode *parser_redirect(token **current);
 ASTNode *parser_subshell(token **current);
 ASTNode *parser_chain(token **current);
 
+/*
+Flag global d’erreur de parsing
+Permet d’annuler la construction de l’AST
+*/
 int error = 0;
 
+/*
+Point d’entrée du parser
+Construit l’AST à partir de la liste de tokens
+*/
 ASTNode *parser(token *tokens)
 {
-    token *current = tokens->next;
-    ASTNode *ast = parser_chain(&current);
-    if (error)
+    token *current = tokens->next; // On ignore le token HEAD
+    ASTNode *ast =
+        parser_chain(&current); // Parse la chaîne complète de commandes
+    if (error) // En cas d’erreur, on libère l’AST
     {
         free_ast(ast);
         error = 0;
@@ -28,16 +37,22 @@ ASTNode *parser(token *tokens)
     return ast;
 }
 
+/*
+Parse les chaînes de commandes séparées par ';'
+Priorité la plus faible
+*/
 ASTNode *parser_chain(token **current)
 {
     ASTNode *left = parser_logique(current);
 
     while (*current && (*current)->type == TOK_POINT_VIRGULE)
     {
+        // Consomme le ';'
         *current = (*current)->next;
 
         ASTNode *right = parser_logique(current);
 
+        // Création du nœud AST_CHAIN
         ASTNode *node = new_node();
         node->type = AST_CHAIN;
         node->data.child.left = left;
@@ -49,6 +64,7 @@ ASTNode *parser_chain(token **current)
     return left;
 }
 
+// Parse les opérateurs logiques && et ||
 ASTNode *parser_logique(token **current)
 {
     ASTNode *left = parser_pipe(current);
@@ -75,6 +91,7 @@ ASTNode *parser_logique(token **current)
     return left;
 }
 
+// Parse les pipes |
 ASTNode *parser_pipe(token **current)
 {
     ASTNode *left = parser_redirect(current);
@@ -83,7 +100,7 @@ ASTNode *parser_pipe(token **current)
 
     while (*current && (*current)->type == TOK_PIPE)
     {
-        *current = (*current)->next;
+        *current = (*current)->next; // Consomme le '|'
 
         ASTNode *right = parser_redirect(current);
         if (!right)
@@ -99,9 +116,11 @@ ASTNode *parser_pipe(token **current)
     return left;
 }
 
+// Parse les redirections
 ASTNode *parser_redirect(token **current)
 {
     ASTNode *next = parser_subshell(current);
+    // La redirection s’applique à un sous-shell ou une commande
 
     while (*current
            && ((*current)->type == TOK_REDIR_IN
@@ -115,38 +134,42 @@ ASTNode *parser_redirect(token **current)
         token_type mode = (*current)->type;
         *current = (*current)->next;
 
+        // Une redirection doit être suivie d’un mot
         if (!*current || (*current)->type != TOK_WORDS)
         {
             fprintf(stderr, "pas de filename\n");
             return next;
         }
-
+        // Création du node AST_REDIRECT
         ASTNode *node = new_node();
         node->type = AST_REDIRECT;
         node->data.redirect.mode = mode;
         // node->data.redirect.filename = (*current)->value;
         node->data.redirect.filename = strdup((*current)->value);
-
         node->data.redirect.cmd = next;
 
-        *current = (*current)->next;
-        next = node;
+        *current = (*current)->next; // Consomme le filename
+
+        next = node; // Permet les redirections en chaîne
     }
     return next;
 }
 
+// Parse un sous-shell
 ASTNode *parser_subshell(token **current)
 {
     if (*current && (*current)->type == TOK_PARO)
     {
-        *current = (*current)->next;
+        *current = (*current)->next; // Consomme '('
 
         ASTNode *node = new_node();
 
         node->type = AST_SUBSHELL;
-        node->data.subshell.child = parser_logique(current);
+        node->data.subshell.child = parser_logique(
+            current); // Le contenu du sous-shell est une expression logique
 
-        if ((*current)->type != TOK_PARC || !node->data.subshell.child)
+        if ((*current)->type != TOK_PARC
+            || !node->data.subshell.child) // Vérifie la parenthèse fermante
         {
             fprintf(stderr, "error not close parenthese\n");
             error = 1;
@@ -155,13 +178,14 @@ ASTNode *parser_subshell(token **current)
         if (!node->data.subshell.child)
             error = 1;
 
-        *current = (*current)->next;
+        *current = (*current)->next; // Consomme ')'
         return node;
     }
 
     return parser_command(current);
 }
 
+// Parse une commande simple ou une structure if
 ASTNode *parser_command(token **current)
 {
     // regle IF
@@ -174,7 +198,9 @@ ASTNode *parser_command(token **current)
     size_t argc = 0;
     node->data.command.argv = NULL;
 
-    while (*current && (*current)->type == TOK_WORDS)
+    while (*current
+           && (*current)->type
+               == TOK_WORDS) // Récupère tous les mots de la commande
     {
         node->data.command.argv =
             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
@@ -183,12 +209,12 @@ ASTNode *parser_command(token **current)
         *current = (*current)->next;
     }
 
-    if (!argc)
+    if (!argc) // Pas de mots → pas une commande valide
     {
         free(node);
         return NULL;
     }
-
+    // NULL-termination de argv
     node->data.command.argv =
         realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
     node->data.command.argv[argc] = NULL;
