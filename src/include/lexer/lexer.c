@@ -63,44 +63,62 @@ int add_token(token *head, token_type type, char *value)
     return 1;
 }
 
-char *read_word(char *input, int *i)
+char *append_part(char *res, char *part)
 {
-    int len = 0;
-    char *word;
-    int j = *i;
-    while (input[j] && !isspace(input[j]) && !strchr("|&;<>\"\'()", input[j]))
+    int len_res = res ? strlen(res) : 0;
+    int len_part = strlen(part);
+    char *tmp = realloc(res, len_res + len_part + 1);
+
+    if (!tmp)
+        return free(res), NULL;
+
+    memcpy(tmp + len_res, part, len_part);
+    tmp[len_res + len_part] = '\0';
+    return tmp;
+}
+
+char *read_part(char *s, int *i)
+{
+    int start;
+
+    if (s[*i] == '\'' || s[*i] == '"')
+        return read_quoted(s, i);
+
+    if (s[*i] == '\\' && s[*i + 1])
     {
-        if (input[j] == '\\' && input[j + 1])
-        {
-            j += 2;
-            len++;
-        }
-        else
-        {
-            j++;
-            len++;
-        }
+        char *p = malloc(2);
+        if (!p)
+            return NULL;
+        p[0] = s[*i + 1];
+        p[1] = '\0';
+        *i += 2;
+        return p;
     }
-    word = malloc(len + 1);
-    if (!word)
-        return NULL;
-    int k = 0;
-    while (*i < j)
+
+    start = *i;
+    while (s[*i] && !isspace(s[*i]) && !strchr("|&;<>\"\'()", s[*i])
+           && s[*i] != '\\')
+        (*i)++;
+
+    return strndup(s + start, *i - start);
+}
+
+char *read_word_extended(char *s, int *i)
+{
+    char *res = NULL;
+    char *part;
+
+    while (s[*i] && !isspace(s[*i]) && !strchr("|&;<>()", s[*i]))
     {
-        if (input[*i] == '\\' && input[*i + 1])
-        {
-            (*i)++;
-            word[k++] = input[*i];
-            (*i)++;
-        }
-        else
-        {
-            word[k++] = input[*i];
-            (*i)++;
-        }
+        part = read_part(s, i);
+        if (!part)
+            return free(res), NULL;
+        res = append_part(res, part);
+        free(part);
+        if (!res)
+            return NULL;
     }
-    word[k] = '\0';
-    return word;
+    return res;
 }
 
 int handle_symbol(char *s, int *i, token *tokens)
@@ -259,7 +277,7 @@ token *lexer(char *input)
         }
         else
         {
-            char *word = read_word(input, &i);
+            char *word = read_word_extended(input, &i);
             if (!word)
                 return token_free_all(tokens), NULL;
             add_token(tokens, check_keyword(word), word);

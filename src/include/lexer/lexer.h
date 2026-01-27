@@ -42,5 +42,6 @@ typedef struct token_struct
 
 void token_free_all(token *head);
 token *lexer(char *input_lx);
+char *read_quoted(char *input, int *i);
 
 #endif // LEXER_H
