@@ -31,7 +31,7 @@ char *extract_var(const char *s, int *stop)
     if (!s || s[0] != '$')
         return NULL;
 
-    if (s[1] == '{')  // Cas ${VAR}
+    if (s[1] == '{') // Cas ${VAR}
     {
         const char *end = strchr(s + 2, '}'); // Cherche la fin }
         if (!end)
@@ -72,7 +72,8 @@ int expand_variable(char **argv, int len)
     for (int i = 0; i < len; i++)
     {
         char *token = argv[i];
-        char buffer[4096] = ""; // Buffer temporaire pour construire l'argument développé
+        char buffer[4096] =
+            ""; // Buffer temporaire pour construire l'argument développé
 
         while (*token)
         {
@@ -82,14 +83,17 @@ int expand_variable(char **argv, int len)
                 char *name = extract_var(token, &stop); // Récupère le nom
                 if (!name)
                 {
-                    strncat(buffer, token, 1); // Pas de variable trouvée, copie le caractère
+                    strncat(buffer, token,
+                            1); // Pas de variable trouvée, copie le caractère
                     token++;
                     continue;
                 }
 
-                char *value = getenv(name); // Vérifie si c'est une variable d'environnement
+                char *value = getenv(
+                    name); // Vérifie si c'est une variable d'environnement
                 if (!value)
-                    value = expand_special(name); // Sinon, regarde les variables spéciales
+                    value = expand_special(
+                        name); // Sinon, regarde les variables spéciales
 
                 if (value)
                     strcat(buffer, value); // Concatène la valeur trouvée
@@ -104,7 +108,8 @@ int expand_variable(char **argv, int len)
             }
         }
 
-        replace_var(argv, i, buffer); // Remplace argv[i] par la version développée
+        replace_var(argv, i,
+                    buffer); // Remplace argv[i] par la version développée
     }
     return 1;
 }
@@ -226,5 +231,5 @@ char *expand_special(char *val)
     if (val[0] >= '0' && val[0] <= '9' && val[1] == '\0')
         return expand_positional(val[0]);
 
-    return NULL;  // Variable non reconnue
+    return NULL; // Variable non reconnue
 }

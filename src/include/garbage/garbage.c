@@ -2,7 +2,8 @@
 
 #include <stdlib.h>
 
-void **garbage; // Tableau global de pointeurs pour suivre la "mémoire à libérer"
+void *
+    *garbage; // Tableau global de pointeurs pour suivre la "mémoire à libérer"
 int len_garbage = 0; // Nombre d'éléments actuellement dans le tableau garbage
 
 /*
@@ -11,7 +12,8 @@ ptr : pointeur à ajouter
 */
 void add_garbage(void *ptr)
 {
-    if (!len_garbage) // // Si c'est le premier élément ajouté, on alloue la memoire + incrementation de la len
+    if (!len_garbage) // // Si c'est le premier élément ajouté, on alloue la
+                      // memoire + incrementation de la len
     {
         garbage = malloc(sizeof(void *));
         garbage[len_garbage++] = ptr;
