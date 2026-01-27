@@ -1,5 +1,6 @@
 #include "expand.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,8 +11,8 @@
 #include "../garbage/garbage.h"
 
 int expand_variable(char **s, int len);
-int expand_special(char **argv, int i);
-char *concat_argv(char **argv, int len);
+char *expand_special(char *val);
+char *concat_argv(void);
 
 extern ShellState g_shell;
 
@@ -21,234 +22,193 @@ void replace_var(char **argv, int i, char *var)
     add_garbage(argv[i]);
 }
 
-int expand_if_branches(IfBranch *branch)
+char *extract_var(const char *s, int *stop)
 {
-    while (branch)
-    {
-        if (!expand_ast(branch->condition))
-            return 0;
-        if (!expand_ast(branch->bloc))
-            return 0;
-
-        branch = branch->next;
-    }
-    return 1;
-}
-
-int expand_ast(ASTNode *ast)
-{
-    if (!ast)
-        return 1;
-
-    switch (ast->type)
-    {
-    case AST_COMMAND:
-        return expand_variable(ast->data.command.argv, ast->data.command.len);
-        break;
-    case AST_REDIRECT:
-        return expand_variable(&ast->data.redirect.filename, 1);
-        break;
-    case AST_PIPE:
-    case AST_AND:
-    case AST_OR:
-    case AST_CHAIN:
-        return expand_ast(ast->data.child.left)
-            && expand_ast(ast->data.child.right);
-        break;
-    case AST_SUBSHELL:
-        return expand_ast(ast->data.subshell.child);
-        break;
-    case AST_IF:
-        if (!expand_if_branches(ast->data.ifnode.branches))
-            return 0;
-        return expand_ast(ast->data.ifnode.blocelse);
-
-    default:
-        return 0;
-    }
-
-    return 1;
-}
-
-char *extract_var(char *s) // TODO: better implem
-{
-    if (s[0] == '$')
-    {
-        if (s[1] == '{')
-        {
-            char *var_end = strchr(s + 2, '}');
-            if (!var_end)
-                return NULL;
-
-            return strndup(s + 2, var_end - (s + 2));
-        }
-        else
-        {
-            int len = 1;
-
-            while (s[len] != '\0' && s[len] >= 'A' && s[len] <= 'Z')
-                len++;
-
-            return strndup(s + 1, len);
-        }
-    }
-    else
+    if (!s || s[0] != '$')
         return NULL;
+
+    if (s[1] == '{')
+    {
+        const char *end = strchr(s + 2, '}');
+        if (!end)
+            return NULL;
+        *stop = (end - s) + 1; // inclure le '}'
+        return strndup(s + 2, end - (s + 2));
+    }
+
+    if (s[1] == '?' || s[1] == '$' || s[1] == '*' || s[1] == '@' || s[1] == '#')
+    {
+        *stop = 2; // $ + char
+        return strndup(s + 1, 1);
+    }
+
+    if (isdigit((unsigned char)s[1]))
+    {
+        *stop = 2;
+        return strndup(s + 1, 1);
+    }
+
+    int len = 1;
+    while (s[len] && (isalnum((unsigned char)s[len]) || s[len] == '_'))
+        len++;
+
+    *stop = len;
+    return strndup(s + 1, len - 1);
 }
 
-int expand_variable(char **s, int len)
+int expand_variable(char **argv, int len)
 {
+    g_shell.argv = argv;
+    g_shell.argc = len;
+
     for (int i = 0; i < len; i++)
     {
-        if (s[i][0] == '$')
+        char *token = argv[i];
+        char buffer[4096] = "";
+
+        while (*token)
         {
-            char *name = extract_var(s[i]);
-
-            if (!name)
-                continue;
-
-            char *var = getenv(name);
-
-            if (var)
+            if (*token == '$')
             {
-                replace_var(s, i, var);
+                int stop = 0;
+                char *name = extract_var(token, &stop);
+                if (!name)
+                {
+                    strncat(buffer, token, 1);
+                    token++;
+                    continue;
+                }
+
+                char *value = getenv(name);
+                if (!value)
+                    value = expand_special(name);
+
+                if (value)
+                    strcat(buffer, value);
+
+                free(name);
+                token += stop;
             }
             else
             {
-                expand_special(s, i);
+                strncat(buffer, token, 1);
+                token++;
             }
-
-            free(name);
         }
+
+        replace_var(argv, i, buffer);
     }
     return 1;
 }
 
-int expand_status(char **argv, int i)
+char *expand_status(void)
 {
-    if (strcmp(argv[i], "$?"))
-        return 0;
-
-    char str[16];
+    char *str = malloc(32);
     sprintf(str, "%d", g_shell.last_return_code);
-    replace_var(argv, i, str);
-    return 1;
+    add_garbage(str);
+    return str;
 }
 
-int expand_pid(char **argv, int i)
+char *expand_pid(void)
 {
-    if (strcmp(argv[i], "$$"))
-        return 0;
-
-    char str[32];
+    char *str = malloc(32);
     sprintf(str, "%d", getpid());
-    replace_var(argv, i, str);
-    return 1;
+    add_garbage(str);
+    return str;
 }
 
-int expand_argv_all(char **argv, int i)
+char *expand_argc(void)
 {
-    if (strcmp(argv[i], "$*") && strcmp(argv[i], "$@"))
-        return 0;
-
-    char *str = concat_argv(argv, i);
-    if (str)
-    {
-        replace_var(argv, i, str);
-        free(str);
-    }
-    return 1;
+    char *str = malloc(16);
+    sprintf(str, "%d", g_shell.argc);
+    add_garbage(str);
+    return str;
 }
 
-int expand_argc(char **argv, int i)
+char *expand_random(void)
 {
-    if (strcmp(argv[i], "$#"))
-        return 0;
-
-    char str[16];
-    sprintf(str, "%d", i);
-    replace_var(argv, i, str);
-    return 1;
-}
-
-int expand_random(char **argv, int i)
-{
-    if (strcmp(argv[i], "$RANDOM"))
-        return 0;
-
-    char str[16];
+    char *str = malloc(16);
     sprintf(str, "%d", rand());
-    replace_var(argv, i, str);
-    return 1;
+    add_garbage(str);
+    return str;
 }
 
-int expand_uid(char **argv, int i)
+char *expand_uid(void)
 {
-    if (strcmp(argv[i], "$UID"))
-        return 0;
-
-    char str[32];
+    char *str = malloc(32);
     sprintf(str, "%d", getuid());
-    replace_var(argv, i, str);
-    return 1;
+    add_garbage(str);
+    return str;
 }
 
-int expand_positional(char **argv, int i)
+char *expand_positional(char c)
 {
-    if (argv[i][0] != '$' || argv[i][1] < '0' || argv[i][1] > '9')
-        return 0;
-
-    int idx = argv[i][1] - '0';
-    if (!argv[idx])
-        replace_var(argv, i, "");
+    int idx = c - '0';
+    char *str;
+    if (idx >= g_shell.argc)
+        str = strdup("");
     else
-        replace_var(argv, i, argv[idx]);
+        str = strdup(g_shell.argv[idx]);
 
-    return 1;
+    add_garbage(str);
+    return str;
 }
 
-int expand_special(char **argv, int i)
-{
-    if (expand_status(argv, i))
-        return 1;
-    if (expand_pid(argv, i))
-        return 1;
-    if (expand_argv_all(argv, i))
-        return 1;
-    if (expand_argc(argv, i))
-        return 1;
-    if (expand_random(argv, i))
-        return 1;
-    if (expand_uid(argv, i))
-        return 1;
-    if (expand_positional(argv, i))
-        return 1;
-
-    return 0;
-}
-
-char *concat_argv(char **argv, int len)
+char *concat_argv(void)
 {
     int full_len = 0;
-
-    if (len < 2)
-        return NULL;
-
-    for (int i = 2; i < len; i++)
+    for (int i = 0; g_shell.argv[i]; i++)
     {
-        full_len += strlen(argv[i]);
-        full_len++;
+        full_len += strlen(g_shell.argv[i]) + 1;
     }
 
-    char *str_concat = malloc(full_len);
+    if (full_len == 0)
+        return strdup("");
 
-    if (!str_concat)
+    char *str = malloc(full_len + 1);
+    if (!str)
         return NULL;
 
-    for (int i = 2; i < len; i++)
+    str[0] = '\0';
+    for (int i = 0; g_shell.argv[i]; i++)
     {
-        strcat(str_concat, argv[i]);
+        strcat(str, g_shell.argv[i]);
+        if (g_shell.argv[i + 1])
+            strcat(str, " ");
     }
 
-    return str_concat;
+    return str;
+}
+
+char *expand_special(char *val)
+{
+    if (!val || val[0] == '\0')
+        return NULL;
+
+    if (strcmp(val, "?") == 0)
+        return expand_status();
+
+    if (strcmp(val, "$") == 0)
+        return expand_pid();
+
+    if (strcmp(val, "*") == 0 || strcmp(val, "@") == 0)
+    {
+        char *str = concat_argv();
+        if (str)
+            add_garbage(str);
+        return str;
+    }
+    if (strcmp(val, "#") == 0)
+        return expand_argc();
+
+    if (strcmp(val, "RANDOM") == 0)
+        return expand_random();
+
+    if (strcmp(val, "UID") == 0)
+        return expand_uid();
+
+    if (val[0] >= '0' && val[0] <= '9' && val[1] == '\0')
+        return expand_positional(val[0]);
+
+    return NULL;
 }

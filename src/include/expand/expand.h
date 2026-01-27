@@ -3,6 +3,6 @@
 
 #include "../ast/ast.h"
 
-int expand_ast(ASTNode *ast);
+int expand_variable(char **argv, int len);
 
 #endif // EXPAND_H

@@ -6,8 +6,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "../../common.h"
 #include "../ast/ast.h"
 #include "../builtins/builtins.h"
+#include "../expand/expand.h"
 #include "../lexer/lexer.h"
 #include "./redirects/redirects.h"
 
@@ -18,6 +20,8 @@ int executeur_de_OR(ASTNode *node);
 int executeur_de_redirect(ASTNode *node);
 int executeur_de_subshell(ASTNode *node);
 int executeur_de_if(ASTNode *node);
+
+extern ShellState g_shell;
 
 int l_executeur_d_ast(ASTNode *node)
 {
@@ -51,9 +55,14 @@ int l_executeur_d_ast(ASTNode *node)
 
 int executeur_de_commande(ASTNode *node)
 {
+    expand_variable(node->data.command.argv, node->data.command.len);
+
     int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
     if (builtin_fait_maison != -1)
+    {
+        g_shell.last_return_code = builtin_fait_maison;
         return builtin_fait_maison;
+    }
 
     pid_t pid = fork();
 
@@ -67,7 +76,8 @@ int executeur_de_commande(ASTNode *node)
 
     int status;
     waitpid(pid, &status, 0);
-    return WEXITSTATUS(status);
+    g_shell.last_return_code = WEXITSTATUS(status);
+    return g_shell.last_return_code;
 }
 
 int executeur_de_pipe(ASTNode *node)
