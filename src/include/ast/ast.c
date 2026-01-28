@@ -38,9 +38,19 @@ void free_ast(ASTNode *node)
     switch (
         node->type) // Selon le type du nœud, libérer les ressources spécifiques
     {
+    // case AST_COMMAND:
+    //     free(node->data.command
+    //              .argv); // Libération du tableau d'arguments pour une
+    //              commande
+    //     break;
     case AST_COMMAND:
-        free(node->data.command
-                 .argv); // Libération du tableau d'arguments pour une commande
+        if (node->data.command.argv)
+        {
+            for (size_t i = 0; node->data.command.argv[i]; i++)
+                free(node->data.command.argv[i]);
+
+            free(node->data.command.argv);
+        }
         break;
 
     case AST_PIPE:
@@ -58,6 +68,16 @@ void free_ast(ASTNode *node)
             node->data.ifnode.branches); // Libération des branches if
         free_ast(
             node->data.ifnode.blocelse); // Libération du bloc "else" si présent
+        break;
+
+    case AST_FOR:
+        free(node->data.fornode.var);
+
+        for (int i = 0; i < node->data.fornode.items_len; i++)
+            free(node->data.fornode.items[i]);
+        free(node->data.fornode.items);
+
+        free_ast(node->data.fornode.body);
         break;
 
     case AST_REDIRECT:

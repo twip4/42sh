@@ -135,7 +135,6 @@ ASTNode *parser_for(token **current)
     node->type = AST_FOR;
 
     node->data.fornode.var = strdup((*current)->value);
-    add_garbage(node->data.fornode.var);
     node->data.fornode.items = NULL;
     node->data.fornode.items_len = 0;
 
@@ -149,22 +148,18 @@ ASTNode *parser_for(token **current)
 
         while (*current && (*current)->type == TOK_WORDS)
         {
-            node->data.fornode.items =
+            char **tmp =
                 realloc(node->data.fornode.items,
                         sizeof(char *) * (node->data.fornode.items_len + 1));
-            if (!node->data.fornode.items)
-                exit(1);
+            if (!tmp)
+                return NULL;
 
+            node->data.fornode.items = tmp;
             node->data.fornode.items[node->data.fornode.items_len++] =
                 strdup((*current)->value);
-            add_garbage(
-                node->data.fornode.items[node->data.fornode.items_len - 1]);
 
             *current = (*current)->next;
         }
-
-        if (node->data.fornode.items)
-            add_garbage(node->data.fornode.items);
     }
 
     // expect ; or newline

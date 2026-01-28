@@ -230,19 +230,17 @@ ASTNode *parser_subshell(token **current)
 //     return node;
 // }
 
-// Parse une commande simple ou une structure if ou structure for
 ASTNode *parser_command(token **current)
 {
-    // regle IF
+    // règle IF
     if (*current && (*current)->type == TOK_IF)
         return parser_if(current);
 
-    // regle FOR
+    // règle FOR
     if (*current && (*current)->type == TOK_FOR)
         return parser_for(current);
 
     ASTNode *node = new_node();
-    add_garbage(node);
     node->type = AST_COMMAND;
 
     size_t argc = 0;
@@ -250,16 +248,13 @@ ASTNode *parser_command(token **current)
 
     while (*current && (*current)->type == TOK_WORDS)
     {
-        char *dup = strdup((*current)->value);
-        add_garbage(dup); // Ajoute chaque strdup au garbage
-
         char **tmp =
-            realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
+            realloc(node->data.command.argv, sizeof(char *) * (argc + 1));
         if (!tmp)
             return NULL;
-        node->data.command.argv = tmp;
 
-        node->data.command.argv[argc++] = dup;
+        node->data.command.argv = tmp;
+        node->data.command.argv[argc++] = strdup((*current)->value);
 
         *current = (*current)->next;
     }
@@ -270,14 +265,12 @@ ASTNode *parser_command(token **current)
         return NULL;
     }
 
-    // NULL-termination
-    char **tmp = realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
+    char **tmp = realloc(node->data.command.argv, sizeof(char *) * (argc + 1));
     if (!tmp)
         return NULL;
+
     node->data.command.argv = tmp;
     node->data.command.argv[argc] = NULL;
-
-    add_garbage(node->data.command.argv); // Ajoute le tableau argv au garbage
     node->data.command.len = argc;
 
     return node;
