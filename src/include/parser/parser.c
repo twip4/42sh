@@ -96,6 +96,48 @@ ASTNode *parser_chain(token **current)
 
     return left;
 }
+ASTNode *parser_bracket_condition(token **current)
+{
+    if (!*current || strcmp((*current)->value, "[") != 0)
+        return NULL;
+
+    *current = (*current)->next; // consomme '['
+
+    ASTNode *node = new_node();
+    node->type = AST_COMMAND;
+    node->data.command.argv = NULL;
+    size_t argc = 0;
+
+    // on ajoute tous les TOK_WORDS jusqu’au ']'
+    while (*current && strcmp((*current)->value, "]") != 0)
+    {
+        char **tmp =
+            realloc(node->data.command.argv, sizeof(char *) * (argc + 1));
+        if (!tmp)
+            return NULL;
+        node->data.command.argv = tmp;
+        node->data.command.argv[argc++] = strdup((*current)->value);
+        *current = (*current)->next;
+    }
+
+    if (!*current || strcmp((*current)->value, "]") != 0)
+    {
+        fprintf(stderr, "syntax error: expected ']'\n");
+        free_ast(node);
+        return NULL;
+    }
+
+    // consomme ']'
+    *current = (*current)->next;
+
+    // termine argv
+    char **tmp = realloc(node->data.command.argv, sizeof(char *) * (argc + 1));
+    node->data.command.argv = tmp;
+    node->data.command.argv[argc] = NULL;
+    node->data.command.len = argc;
+
+    return node;
+}
 
 // Parse les opérateurs logiques && et ||
 ASTNode *parser_logique(token **current)
@@ -234,11 +276,9 @@ ASTNode *parser_command(token **current)
         return parser_for(current);
 
     // regle WHILE
-    if (*current && ((*current)->type == TOK_WHILE
-              || (*current)->type == TOK_UNTIL))
+    if (*current
+        && ((*current)->type == TOK_WHILE || (*current)->type == TOK_UNTIL))
         return parser_while(current);
-
-
 
     ASTNode *node = new_node();
     node->type = AST_COMMAND;

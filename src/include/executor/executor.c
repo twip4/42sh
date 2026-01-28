@@ -383,22 +383,38 @@ int executeur_de_while(ASTNode *node)
     int last_body_status = 0;
     int body_executed = 0;
 
+    g_shell.in_loop++;
+
     while (1)
     {
-        int cond_status =
-            l_executeur_d_ast(node->data.whilenode.condition);
+        int cond_status = l_executeur_d_ast(node->data.whilenode.condition);
 
         // while: continue if cond == 0
         // until: continue if cond != 0
         if ((!node->data.whilenode.is_until && cond_status != 0)
-         || ( node->data.whilenode.is_until && cond_status == 0))
+            || (node->data.whilenode.is_until && cond_status == 0))
             break;
 
         body_executed = 1;
-        last_body_status =
-            l_executeur_d_ast(node->data.whilenode.body);
+        last_body_status = l_executeur_d_ast(node->data.whilenode.body);
+
+        if (g_shell.ctrl == CTRL_BREAK)
+            break;
+
+        if (g_shell.ctrl == CTRL_CONTINUE)
+        {
+            g_shell.ctrl = CTRL_NONE;
+            continue;
+        }
     }
 
-    return body_executed ? last_body_status : 0;
-}
+    if (g_shell.ctrl == CTRL_BREAK)
+        g_shell.ctrl = CTRL_NONE;
 
+    g_shell.in_loop--;
+    if (body_executed)
+    {
+        return last_body_status;
+    }
+    return 0;
+}

@@ -97,7 +97,6 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
     return node;
 }
 
-
 // parser for
 ASTNode *parser_for(token **current)
 {
@@ -181,83 +180,15 @@ error:
     return NULL;
 }
 
-// ASTNode *parser_while(token **current)
-// {
-//     if (!*current)
-//         return NULL;
-
-//     int is_until = ((*current)->type == TOK_UNTIL);
-
-//     *current = (*current)->next; // consume while/until
-
-//     ASTNode *condition = parser_logique(current);
-//     if (!condition)
-//     {
-//         error = 1;
-//         return NULL;
-//     }
-
-//     if (!skip_semicolons_et_retour_a_la_ligne(current))
-//     {
-//         error = 1;
-//         free_ast(condition);
-//         return NULL;
-//     }
-
-//     if (!*current || (*current)->type != TOK_WORDS
-//         || strcmp((*current)->value, "do") != 0)
-//     {
-//         fprintf(stderr, "%s: expected do\n",
-//                 is_until ? "until" : "while");
-//         free_ast(condition);
-//         error = 1;
-//         return NULL;
-//     }
-
-//     *current = (*current)->next;
-
-//     ASTNode *body = parser_logique(current);
-//     if (!body)
-//     {
-//         error = 1;
-//         free_ast(condition);
-//         return NULL;
-//     }
-
-//     skip_semicolons_et_retour_a_la_ligne(current);
-
-//     if (!*current || (*current)->type != TOK_WORDS
-//         || strcmp((*current)->value, "done") != 0)
-//     {
-//         fprintf(stderr, "%s: expected done\n",
-//                 is_until ? "until" : "while");
-//         error = 1;
-//         free_ast(condition);
-//         free_ast(body);
-//         return NULL;
-//     }
-
-//     *current = (*current)->next;
-
-//     ASTNode *node = new_node();
-//     node->type = AST_WHILE;
-//     node->data.whilenode.condition = condition;
-//     node->data.whilenode.body = body;
-//     node->data.whilenode.is_until = is_until;
-
-//     return node;
-// }
-
 ASTNode *parser_while(token **current)
 {
-    if (!*current)
+    if (!current || !*current)
         return NULL;
 
     int is_until = ((*current)->type == TOK_UNTIL);
 
     *current = (*current)->next; // consume while/until
 
-    // Parser la condition (une logique simple)
     ASTNode *condition = parser_logique(current);
     if (!condition)
     {
@@ -267,50 +198,43 @@ ASTNode *parser_while(token **current)
 
     if (!skip_semicolons_et_retour_a_la_ligne(current))
     {
-        error = 1;
         free_ast(condition);
+        error = 1;
         return NULL;
     }
 
-    // Vérifier qu'on a "do"
     if (!*current || (*current)->type != TOK_WORDS
         || strcmp((*current)->value, "do") != 0)
     {
-        fprintf(stderr, "%s: expected do\n",
-                is_until ? "until" : "while");
+        fprintf(stderr, "%s: expected do\n", is_until ? "until" : "while");
         free_ast(condition);
         error = 1;
         return NULL;
     }
 
-    *current = (*current)->next; // consommer "do"
+    *current = (*current)->next; // consume do
 
-    // Parser le corps complet du while (plusieurs commandes possibles)
-    ASTNode *body = parser_chain(current);
+    ASTNode *body = parser_chain_until(current, "done");
     if (!body)
     {
+        fprintf(stderr, "%s: invalid body\n", is_until ? "until" : "while");
         free_ast(condition);
         error = 1;
         return NULL;
     }
 
-    skip_semicolons_et_retour_a_la_ligne(current);
-
-    // Vérifier qu'on a "done"
     if (!*current || (*current)->type != TOK_WORDS
         || strcmp((*current)->value, "done") != 0)
     {
-        fprintf(stderr, "%s: expected done\n",
-                is_until ? "until" : "while");
+        fprintf(stderr, "%s: expected done\n", is_until ? "until" : "while");
         free_ast(condition);
         free_ast(body);
         error = 1;
         return NULL;
     }
 
-    *current = (*current)->next; // consommer "done"
+    *current = (*current)->next; // consume done
 
-    // Créer le noeud while
     ASTNode *node = new_node();
     node->type = AST_WHILE;
     node->data.whilenode.condition = condition;
@@ -319,7 +243,6 @@ ASTNode *parser_while(token **current)
 
     return node;
 }
-
 
 /*
 Avance le pointeur de tokens tant que l’on rencontre
