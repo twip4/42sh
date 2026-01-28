@@ -42,10 +42,18 @@ static char **dup_argv(char **argv)
     if (!copy)
         return NULL;
 
+    // Duplique chaque chaîne et ajoute au garbage
     for (i = 0; argv[i]; i++)
+    {
         copy[i] = strdup(argv[i]);
+        add_garbage(copy[i]); // chaque strdup est tracké
+    }
 
     copy[i] = NULL;
+
+    // Ajoute le tableau lui-même au garbage
+    add_garbage(copy);
+
     return copy;
 }
 
