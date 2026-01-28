@@ -130,8 +130,14 @@ int builtin_echo(char **argv)
 
 int is_number(char *s)
 {
+    if (!s || !*s)
+        return 0;
     int i = 0;
-    while (s[i] != '\0')
+    if (s[i] == '-' || s[i] == '+')
+        i++;
+    if (!s[i])
+        return 0;
+    while (s[i])
     {
         if (!isdigit(s[i]))
             return 0;
@@ -158,7 +164,7 @@ int builtin_exit(char **argv)
             return_code = 2;
         }
         else
-            return_code = atoi(argv[1]);
+            return_code = atoi(argv[1]) % 256;
     }
     else
         return_code = g_shell.last_return_code;
@@ -180,31 +186,49 @@ int builtin_exit(char **argv)
 int builtin_cd(char **argv)
 {
     char *path;
-    // choix du chemin à utiliser
-    if (!argv[1] || strcmp(argv[1], "~") == 0)
-        path = getenv("HOME"); // par défaut : HOME
-    else if (strcmp(argv[1], "-") == 0)
-        path = getenv("OLDPWD"); // dernier dossier
-    else
-        path = argv[1]; // chemin fourni
+    int print_path = 0;
 
-    char *current_pwd = getcwd(NULL, 0); // sauvegarde du pwd actuel
-    if (chdir(path) != 0) // on fait du coup le chdir et on regarde si ca marche
+    if (!argv[1] || strcmp(argv[1], "~") == 0)
+    {
+        path = getenv("HOME");
+        if (!path)
+        {
+            fprintf(stderr, "cd: HOME not set\n");
+            return 1;
+        }
+    }
+    else if (strcmp(argv[1], "-") == 0)
+    {
+        path = getenv("OLDPWD");
+        if (!path)
+        {
+            fprintf(stderr, "cd: OLDPWD not set\n");
+            return 1;
+        }
+        print_path = 1;
+    }
+    else
+        path = argv[1];
+
+    char *current_pwd = getcwd(NULL, 0);
+    if (chdir(path) != 0)
     {
         fprintf(stderr, "cd: %s: No such file or directory\n", path);
         free(current_pwd);
         return 1;
     }
 
-    // Mise à jour des variables d'environnement PWD et OLDPWD
     if (current_pwd)
-    {
         setenv("OLDPWD", current_pwd, 1);
-        free(current_pwd);
-        current_pwd = NULL;
-        current_pwd = getcwd(NULL, 0);
-        setenv("PWD", current_pwd, 1);
-        free(current_pwd);
+    free(current_pwd);
+
+    char *new_pwd = getcwd(NULL, 0);
+    if (new_pwd)
+    {
+        setenv("PWD", new_pwd, 1);
+        if (print_path)
+            printf("%s\n", new_pwd);
+        free(new_pwd);
     }
     return 0;
 }
