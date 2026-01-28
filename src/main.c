@@ -10,7 +10,7 @@
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
-ShellState g_shell = { 0, 1, NULL, NULL, 0 };
+ShellState g_shell = { 0, 1, NULL, NULL, NULL, 0, 0, 0 };
 
 FILE *get_input(int argc, char *argv[])
 {
@@ -48,6 +48,8 @@ int execution_chain(char *line)
     if (!tokens)
         return 1;
 
+    g_shell.tokens = tokens;
+
     ASTNode *ast = parser(tokens);
     if (!ast)
     {
@@ -73,6 +75,8 @@ void shell_loop(FILE *input)
     char *line = NULL;
     size_t len = 0;
     int tty = isatty(fileno(input));
+
+    g_shell.is_interactive = tty;
 
     while (g_shell.run_tty)
     {

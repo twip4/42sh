@@ -11,6 +11,7 @@
 #include "../ast/ast.h"
 #include "../builtins/builtins.h"
 #include "../expand/expand.h"
+#include "../garbage/garbage.h"
 #include "../lexer/lexer.h"
 #include "./redirects/redirects.h"
 
@@ -178,14 +179,22 @@ int executeur_de_subshell(ASTNode *node)
 {
     pid_t pid = fork();
     if (pid == 0)
-        _exit(l_executeur_d_ast(
-            node->data.subshell.child)); // execute le subshell en appelant la
-                                         // mthode principale sur le noeud fils
+    {
+        g_shell.is_subshell = 1;
+        int ret = l_executeur_d_ast(node->data.subshell.child);
+
+        free_ast(node->data.subshell.child);
+        clear_garbage();
+        token_free_all(g_shell.tokens); // si stockés globalement
+
+        _exit(ret);
+    }
 
     int status;
     waitpid(pid, &status, 0);
     // code exit du fork
-    return WEXITSTATUS(status);
+    g_shell.last_return_code = WEXITSTATUS(status);
+    return g_shell.last_return_code;
 }
 
 void restore_fds(int saved_stdin,
