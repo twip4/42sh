@@ -90,6 +90,11 @@ ASTNode *parser_logique(token **current)
 
         left = node;
     }
+    if (error)
+    {
+        free_ast(left);
+        return NULL;
+    }
     return left;
 }
 
@@ -187,49 +192,6 @@ ASTNode *parser_subshell(token **current)
     return parser_command(current);
 }
 
-// // Parse une commande simple ou une structure if
-// ASTNode *parser_command(token **current)
-// {
-//     // regle IF
-//     if (*current && (*current)->type == TOK_IF)
-//         return parser_if(current);
-
-//     // regle FOR
-//     if (*current && (*current)->type == TOK_FOR)
-//         return parser_for(current);
-
-//     ASTNode *node = new_node();
-//     node->type = AST_COMMAND;
-
-//     size_t argc = 0;
-//     node->data.command.argv = NULL;
-
-//     while (*current
-//            && (*current)->type
-//                == TOK_WORDS) // Récupère tous les mots de la commande
-//     {
-//         node->data.command.argv =
-//             realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
-//         node->data.command.argv[argc++] = (*current)->value;
-
-//         *current = (*current)->next;
-//     }
-
-//     if (!argc) // Pas de mots → pas une commande valide
-//     {
-//         free(node);
-//         return NULL;
-//     }
-//     // NULL-termination de argv
-//     node->data.command.argv =
-//         realloc(node->data.command.argv, (argc + 1) * sizeof(char *));
-//     node->data.command.argv[argc] = NULL;
-
-//     node->data.command.len = argc;
-
-//     return node;
-// }
-
 ASTNode *parser_command(token **current)
 {
     // règle IF
@@ -239,6 +201,13 @@ ASTNode *parser_command(token **current)
     // règle FOR
     if (*current && (*current)->type == TOK_FOR)
         return parser_for(current);
+
+    // regle WHILE
+    if (*current && ((*current)->type == TOK_WHILE
+              || (*current)->type == TOK_UNTIL))
+        return parser_while(current);
+
+
 
     ASTNode *node = new_node();
     node->type = AST_COMMAND;

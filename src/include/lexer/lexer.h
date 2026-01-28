@@ -11,6 +11,7 @@ typedef enum // liste tous les types de tokens
     TOK_ELSE, // "else"
     TOK_FI, // "fi"
     TOK_WHILE, // "while"
+    TOK_UNTIL, // "until"
     TOK_FOR, // "for"
 
     TOK_POINT_VIRGULE, // ";"

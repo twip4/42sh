@@ -79,6 +79,12 @@ void free_ast(ASTNode *node)
 
         free_ast(node->data.fornode.body);
         break;
+    
+    case AST_WHILE:
+        free_ast(node->data.whilenode.condition);
+        free_ast(node->data.whilenode.body);
+        break;
+
 
     case AST_REDIRECT:
         free_ast(node->data.redirect.cmd);

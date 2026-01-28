@@ -15,7 +15,8 @@ typedef enum
     AST_SUBSHELL, // ( ... )
     AST_CHAIN,
     AST_IF,
-    AST_FOR
+    AST_FOR,
+    AST_WHILE,
 } ASTNodeType;
 
 /*
@@ -88,6 +89,13 @@ typedef struct ASTNode
             int items_len;
             struct ASTNode *body; // body du for
         } fornode;
+
+        struct
+        {
+            struct ASTNode *condition;
+            struct ASTNode *body;
+            int is_until;  
+        } whilenode;
 
     } data;
 } ASTNode;

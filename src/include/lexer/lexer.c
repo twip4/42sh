@@ -264,6 +264,8 @@ token_type check_keyword(char *word)
         return TOK_FI;
     if (strcmp(word, "while") == 0)
         return TOK_WHILE;
+    if (strcmp(word, "until") == 0)
+        return TOK_UNTIL;
     if (strcmp(word, "for") == 0)
         return TOK_FOR;
     return TOK_WORDS; // si ce n'est pas un mot-clé, c'est un mot normal

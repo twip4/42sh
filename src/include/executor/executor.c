@@ -27,6 +27,7 @@ int executeur_de_redirect(ASTNode *node);
 int executeur_de_subshell(ASTNode *node);
 int executeur_de_if(ASTNode *node);
 int executeur_de_for(ASTNode *node);
+int executeur_de_while(ASTNode *node);
 
 extern ShellState g_shell;
 
@@ -79,6 +80,8 @@ int l_executeur_d_ast(ASTNode *node)
         return executeur_de_if(node);
     case AST_FOR:
         return executeur_de_for(node);
+    case AST_WHILE:
+        return executeur_de_while(node);
     case AST_CHAIN:
         l_executeur_d_ast(node->data.child.left);
         return l_executeur_d_ast(node->data.child.right);
@@ -347,3 +350,28 @@ int executeur_de_for(ASTNode *node)
 
     return status;
 }
+
+int executeur_de_while(ASTNode *node)
+{
+    int last_body_status = 0;
+    int body_executed = 0;
+
+    while (1)
+    {
+        int cond_status =
+            l_executeur_d_ast(node->data.whilenode.condition);
+
+        // while: continue if cond == 0
+        // until: continue if cond != 0
+        if ((!node->data.whilenode.is_until && cond_status != 0)
+         || ( node->data.whilenode.is_until && cond_status == 0))
+            break;
+
+        body_executed = 1;
+        last_body_status =
+            l_executeur_d_ast(node->data.whilenode.body);
+    }
+
+    return body_executed ? last_body_status : 0;
+}
+
