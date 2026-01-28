@@ -59,6 +59,7 @@ static char **dup_argv(char **argv)
 
 int l_executeur_d_ast(ASTNode *node)
 {
+    int status;
     if (node == NULL)
         return 0;
     switch (node->type)
@@ -80,8 +81,13 @@ int l_executeur_d_ast(ASTNode *node)
     case AST_FOR:
         return executeur_de_for(node);
     case AST_CHAIN:
-        l_executeur_d_ast(node->data.child.left);
-        return l_executeur_d_ast(node->data.child.right);
+        status = l_executeur_d_ast(node->data.child.left);
+
+        if (g_shell.ctrl != CTRL_NONE)
+            return status;
+
+        status = l_executeur_d_ast(node->data.child.right);
+        return status;
     default:
         fprintf(stderr, "l executeur  ast: type de noeud %d NOT IMPLEMENTED\n",
                 node->type);
@@ -324,26 +330,47 @@ int executeur_de_for(ASTNode *node)
 
     int status = 0;
 
-    // Si aucun "in", équivalent à "$@"
+    g_shell.in_loop++;
+
     if (node->data.fornode.items_len == 0)
     {
         for (int i = 0; g_shell.argv && g_shell.argv[i]; i++)
         {
             setenv(node->data.fornode.var, g_shell.argv[i], 1);
             status = l_executeur_d_ast(node->data.fornode.body);
+
+            if (g_shell.ctrl == CTRL_BREAK)
+                break;
+
+            if (g_shell.ctrl == CTRL_CONTINUE)
+            {
+                g_shell.ctrl = CTRL_NONE;
+                continue;
+            }
         }
-        return status;
     }
-
-    // Boucle sur les items définis dans "in"
-    for (int i = 0; i < node->data.fornode.items_len; i++)
+    else
     {
-        // Définit la variable de boucle dans l'environnement
-        setenv(node->data.fornode.var, node->data.fornode.items[i], 1);
+        for (int i = 0; i < node->data.fornode.items_len; i++)
+        {
+            setenv(node->data.fornode.var, node->data.fornode.items[i], 1);
+            status = l_executeur_d_ast(node->data.fornode.body);
 
-        // Exécute le corps de la boucle
-        status = l_executeur_d_ast(node->data.fornode.body);
+            if (g_shell.ctrl == CTRL_BREAK)
+                break;
+
+            if (g_shell.ctrl == CTRL_CONTINUE)
+            {
+                g_shell.ctrl = CTRL_NONE;
+                continue;
+            }
+        }
     }
+
+    if (g_shell.ctrl == CTRL_BREAK)
+        g_shell.ctrl = CTRL_NONE;
+
+    g_shell.in_loop--;
 
     return status;
 }

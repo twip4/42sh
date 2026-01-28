@@ -10,7 +10,7 @@
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
-ShellState g_shell = { 0, 1, NULL, NULL, NULL, 0, 0, 0 };
+ShellState g_shell = { 0, 1, NULL, NULL, NULL, 0, 0, 0, CTRL_NONE, 0 };
 
 FILE *get_input(int argc, char *argv[])
 {

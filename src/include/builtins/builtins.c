@@ -16,6 +16,8 @@ int builtin_cd(char **argv);
 int builtin_export(char **argv);
 void clear_exports(void);
 int builtin_unset(char **argv);
+int builtin_break(void);
+int builtin_continue(void);
 int builtin_dot(char **argv);
 
 // Variable globale pour l'état du shell
@@ -48,6 +50,12 @@ int executeur_de_builtins(char **argv)
 
     if (strcmp(argv[0], "unset") == 0)
         return builtin_unset(argv);
+
+    if (strcmp(argv[0], "continue") == 0)
+        return builtin_continue();
+
+    if (strcmp(argv[0], "break") == 0)
+        return builtin_break();
 
     if (strcmp(argv[0], ".") == 0)
         return builtin_dot(argv);
@@ -353,4 +361,30 @@ int builtin_dot(char **argv)
     free(line);
     fclose(file);
     return last_status;
+}
+
+// BREAK
+
+int builtin_break(void)
+{
+    if (!g_shell.in_loop)
+    {
+        fprintf(stderr, "not in a loop\n");
+        return 1;
+    }
+    g_shell.ctrl = CTRL_BREAK;
+    return 0;
+}
+
+// CONTINUE
+
+int builtin_continue(void)
+{
+    if (!g_shell.in_loop)
+    {
+        fprintf(stderr, "not in a loop\n");
+        return 1;
+    }
+    g_shell.ctrl = CTRL_CONTINUE;
+    return 0;
 }

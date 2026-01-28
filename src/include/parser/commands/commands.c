@@ -1,5 +1,6 @@
 #include "commands.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -36,7 +37,7 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
         {
             *current = (*current)->next;
 
-            ASTNode *condition = parser_logique(current);
+            ASTNode *condition = parser_chain(current);
 
             /*
             Après la condition, on attend des séparateurs
@@ -55,7 +56,7 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
 
             *current = (*current)->next; // consomme THEN
 
-            ASTNode *bloc = parser_logique(current); // parse le bloc condition
+            ASTNode *bloc = parser_chain(current); // parse le bloc condition
 
             skip_semicolons_et_retour_a_la_ligne(
                 current); // ignore les separateurs
@@ -80,7 +81,7 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
         {
             *current = (*current)->next; // Consomme ELSE
             node->data.ifnode.blocelse =
-                parser_logique(current); // Parse le bloc else
+                parser_chain(current); // Parse le bloc else
 
             skip_semicolons_et_retour_a_la_ligne(
                 current); // ignore les separateurs apres le bloc else
@@ -120,10 +121,8 @@ ASTNode *parser_for(token **current)
     if (!current || !*current || (*current)->type != TOK_FOR)
         return NULL;
 
-    // consume "for"
-    *current = (*current)->next;
+    *current = (*current)->next; // consume for
 
-    // variable name
     if (!*current || (*current)->type != TOK_WORDS)
     {
         fprintf(stderr, "for: expected variable name\n");
@@ -133,7 +132,6 @@ ASTNode *parser_for(token **current)
 
     ASTNode *node = new_node();
     node->type = AST_FOR;
-
     node->data.fornode.var = strdup((*current)->value);
     node->data.fornode.items = NULL;
     node->data.fornode.items_len = 0;
@@ -148,13 +146,10 @@ ASTNode *parser_for(token **current)
 
         while (*current && (*current)->type == TOK_WORDS)
         {
-            char **tmp =
+            node->data.fornode.items =
                 realloc(node->data.fornode.items,
                         sizeof(char *) * (node->data.fornode.items_len + 1));
-            if (!tmp)
-                return NULL;
 
-            node->data.fornode.items = tmp;
             node->data.fornode.items[node->data.fornode.items_len++] =
                 strdup((*current)->value);
 
@@ -166,8 +161,7 @@ ASTNode *parser_for(token **current)
     if (!skip_semicolons_et_retour_a_la_ligne(current))
     {
         fprintf(stderr, "for: expected newline or ;\n");
-        error = 1;
-        return NULL;
+        goto error;
     }
 
     // expect "do"
@@ -175,32 +169,31 @@ ASTNode *parser_for(token **current)
         || strcmp((*current)->value, "do") != 0)
     {
         fprintf(stderr, "for: expected do\n");
-        error = 1;
-        return NULL;
+        goto error;
     }
-
     *current = (*current)->next;
 
-    // body
-    node->data.fornode.body = parser_logique(current);
+    node->data.fornode.body = parser_chain_until(current, "done");
     if (!node->data.fornode.body)
     {
-        error = 1;
-        return NULL;
+        fprintf(stderr, "for: invalide body\n");
+        goto error;
     }
-
-    skip_semicolons_et_retour_a_la_ligne(current);
 
     // expect "done"
     if (!*current || (*current)->type != TOK_WORDS
         || strcmp((*current)->value, "done") != 0)
     {
         fprintf(stderr, "for: expected done\n");
-        error = 1;
-        return NULL;
+        goto error;
     }
 
     *current = (*current)->next;
 
     return node;
+
+error:
+    error = 1;
+    free_ast(node);
+    return NULL;
 }
