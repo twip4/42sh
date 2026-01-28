@@ -30,8 +30,7 @@ run_test "cd to /tmp" \
 
 run_test "cd invalid path" \
     "$BIN_PATH -c 'cd /does_not_exist; echo \$?'" \
-    "cd: /does_not_exist: No such file or directory
-1"
+    $'cd: /does_not_exist: No such file or directory\n1'
 
 run_test "cd HOME" \
     "$BIN_PATH -c 'cd; pwd'" \
@@ -41,3 +40,30 @@ run_test "cd dash (OLDPWD)" \
     "$BIN_PATH -c 'cd /tmp; cd -; pwd'" \
     "$(pwd)"
 
+# Dot tests
+
+echo "Dot tests"
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+cat > "$TMP_DIR/simple.sh" << 'EOF'
+echo hello
+echo world
+EOF
+
+run_test "dot simple script" \
+    "$BIN_PATH -c '. $TMP_DIR/simple.sh'" \
+    $'hello\nworld'
+
+cat > "$TMP_DIR/env.sh" << 'EOF'
+export DOT_VAR=hello
+EOF
+
+run_test "dot preserves environment variable" \
+    "$BIN_PATH -c '. $TMP_DIR/env.sh; echo \$DOT_VAR'" \
+    "hello"
+
+run_test "dot without argument" \
+    "$BIN_PATH -c '.'" \
+    ".: filename argument required"

@@ -16,6 +16,9 @@ int builtin_cd(char **argv);
 int builtin_export(char **argv);
 void clear_exports(void);
 int builtin_unset(char **argv);
+int builtin_break(void);
+int builtin_continue(void);
+int builtin_dot(char **argv);
 
 // Variable globale pour l'état du shell
 extern ShellState g_shell;
@@ -47,6 +50,15 @@ int executeur_de_builtins(char **argv)
 
     if (strcmp(argv[0], "unset") == 0)
         return builtin_unset(argv);
+
+    if (strcmp(argv[0], "continue") == 0)
+        return builtin_continue();
+
+    if (strcmp(argv[0], "break") == 0)
+        return builtin_break();
+
+    if (strcmp(argv[0], ".") == 0)
+        return builtin_dot(argv);
 
     return -1; // BUILTIN PAS IMPLEMENTE
 }
@@ -318,4 +330,61 @@ int builtin_unset(char **argv) // rajouter les fonctions
     }
     fprintf(stderr, "invalid args\n");
     return 1; // erreur si aucun argument
+}
+
+int builtin_dot(char **argv)
+{
+    FILE *file;
+    char *line = NULL;
+    size_t len = 0;
+    int last_status = 0;
+
+    if (!argv[1])
+    {
+        fprintf(stderr, ".: filename argument required\n");
+        return 2;
+    }
+    file = fopen(argv[1], "r");
+    if (!file)
+    {
+        fprintf(stderr, ".: %s: No such file or directory\n", argv[1]);
+        return 1;
+    }
+
+    while (getline(&line, &len, file) != -1)
+    {
+        if (line[0] == '\n' || line[0] == '#')
+            continue;
+        last_status = execution_chain(line);
+        g_shell.last_return_code = last_status;
+    }
+    free(line);
+    fclose(file);
+    return last_status;
+}
+
+// BREAK
+
+int builtin_break(void)
+{
+    if (!g_shell.in_loop)
+    {
+        fprintf(stderr, "not in a loop\n");
+        return 1;
+    }
+    g_shell.ctrl = CTRL_BREAK;
+    return 0;
+}
+
+// CONTINUE
+
+int builtin_continue(void)
+{
+    if (!g_shell.in_loop)
+    {
+        fprintf(stderr, "not in a loop\n");
+        return 1;
+    }
+    g_shell.ctrl = CTRL_CONTINUE;
+    return 0;
 }

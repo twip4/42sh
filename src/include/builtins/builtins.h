@@ -8,5 +8,6 @@ typedef struct export_history
 } export_history;
 
 int executeur_de_builtins(char **argv);
+int execution_chain(char *line);
 
 #endif // BUILTINS_H

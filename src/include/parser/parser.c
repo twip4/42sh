@@ -39,6 +39,37 @@ ASTNode *parser(token *tokens)
     return ast;
 }
 
+int is_keyword(token *tok, const char *kw)
+{
+    return tok && tok->type == TOK_WORDS && strcmp(tok->value, kw) == 0;
+}
+
+ASTNode *parser_chain_until(token **current, const char *stop)
+{
+    ASTNode *left = parser_logique(current);
+    if (!left)
+        return NULL;
+
+    while (*current && !is_keyword(*current, stop)
+           && (*current)->type == TOK_POINT_VIRGULE)
+    {
+        *current = (*current)->next; // consume ;
+
+        if (is_keyword(*current, stop))
+            break;
+
+        ASTNode *right = parser_logique(current);
+
+        ASTNode *node = new_node();
+        node->type = AST_CHAIN;
+        node->data.child.left = left;
+        node->data.child.right = right;
+        left = node;
+    }
+
+    return left;
+}
+
 /*
 Parse les chaînes de commandes séparées par ';'
 Priorité la plus faible
