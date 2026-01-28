@@ -29,6 +29,25 @@ int executeur_de_for(ASTNode *node);
 
 extern ShellState g_shell;
 
+static char **dup_argv(char **argv)
+{
+    int i;
+    char **copy;
+
+    for (i = 0; argv[i]; i++)
+        ;
+
+    copy = malloc(sizeof(char *) * (i + 1));
+    if (!copy)
+        return NULL;
+
+    for (i = 0; argv[i]; i++)
+        copy[i] = strdup(argv[i]);
+
+    copy[i] = NULL;
+    return copy;
+}
+
 int l_executeur_d_ast(ASTNode *node)
 {
     if (node == NULL)
@@ -63,9 +82,19 @@ int l_executeur_d_ast(ASTNode *node)
 
 int executeur_de_commande(ASTNode *node) // exécution de commande
 {
-    expand_variable(node->data.command.argv, node->data.command.len);
+    char **exec_argv;
+    int len = node->data.command.len;
 
-    int builtin_fait_maison = executeur_de_builtins(node->data.command.argv);
+    // DUPLICATION AVANT EXPANSION
+    exec_argv = dup_argv(node->data.command.argv);
+    if (!exec_argv)
+        return 1;
+
+    // EXPANSION À L’EXÉCUTION
+    expand_variable(exec_argv, len);
+    // expand_variable(node->data.command.argv, node->data.command.len);
+
+    int builtin_fait_maison = executeur_de_builtins(exec_argv);
     if (builtin_fait_maison != -1)
     {
         g_shell.last_return_code = builtin_fait_maison;
@@ -76,8 +105,8 @@ int executeur_de_commande(ASTNode *node) // exécution de commande
 
     if (pid == 0)
     {
-        execvp(node->data.command.argv[0],
-               node->data.command.argv); // plus tard utiliser execve
+        execvp(exec_argv[0],
+               exec_argv); // plus tard utiliser execve
         perror("execvp");
         _exit(127); // dans la doc shell command not found
     }
