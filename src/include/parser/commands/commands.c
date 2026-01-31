@@ -13,15 +13,17 @@ int skip_semicolons_et_retour_a_la_ligne(token **current);
 parse une structure conditionnelle if / elif / else / fi
 et construit le nœud AST correspondant
 */
-
-ASTNode *parser_if(token **current) // parser pour l'instruction IF
+ASTNode *parser_if(token **current)
 {
     // vérification de base : token valide et début par IF
     if (!current || !*current || (*current)->type != TOK_IF)
         return NULL;
 
-    // création du node  de type AST_IF
+    // création du node de type AST_IF
     ASTNode *node = new_node();
+    if (!node)
+        return NULL;
+
     node->type = AST_IF;
     node->data.ifnode.branches = NULL;
     node->data.ifnode.blocelse = NULL;
@@ -36,34 +38,61 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
         if (t == TOK_IF || t == TOK_ELIF) // gestion des branches IF et ELIF
         {
             *current = (*current)->next;
-
             ASTNode *condition = parser_chain(current);
+
+            if (!condition)
+            {
+                free_ast(node); // AJOUT: libérer le node et ses branches
+                error = 2;
+                return NULL;
+            }
 
             /*
             Après la condition, on attend des séparateurs
             (newline ou ;)
             */
-
             if (!skip_semicolons_et_retour_a_la_ligne(current))
             {
+                free_ast(condition); // AJOUT: libérer la condition
+                free_ast(node);
+                error = 2;
                 return NULL;
             }
+
             // Le THEN est obligatoire
             if (!*current || (*current)->type != TOK_THEN)
             {
+                free_ast(condition); // AJOUT: libérer la condition
+                free_ast(node);
+                error = 2;
                 return NULL;
             }
 
             *current = (*current)->next; // consomme THEN
-
             ASTNode *bloc = parser_chain(current); // parse le bloc condition
+
+            if (!bloc) // AJOUT: vérifier si le bloc a été parsé
+            {
+                free_ast(condition);
+                free_ast(node);
+                error = 2;
+                return NULL;
+            }
 
             skip_semicolons_et_retour_a_la_ligne(
                 current); // ignore les separateurs
 
-            // création d’une nouvelle branche if / elif
-
+            // création d'une nouvelle branche if / elif
             IfBranch *branch = malloc(sizeof(IfBranch));
+            if (!branch) // AJOUT: vérifier malloc
+            {
+                free_ast(condition);
+                free_ast(bloc);
+                free_ast(node);
+                error = 2;
+                return NULL;
+            }
+
             branch->condition = condition;
             branch->bloc = bloc;
             branch->next = NULL;
@@ -71,10 +100,8 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
             // ajout de la branche à la liste
             if (!node->data.ifnode.branches)
                 node->data.ifnode.branches = branch;
-
             else
                 last_branch->next = branch;
-
             last_branch = branch;
         }
         else if (t == TOK_ELSE) // Gestion du ELSE
@@ -82,6 +109,14 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
             *current = (*current)->next; // Consomme ELSE
             node->data.ifnode.blocelse =
                 parser_chain(current); // Parse le bloc else
+
+            if (!node->data.ifnode
+                     .blocelse) // AJOUT: vérifier si le bloc else a été parsé
+            {
+                free_ast(node);
+                error = 2;
+                return NULL;
+            }
 
             skip_semicolons_et_retour_a_la_ligne(
                 current); // ignore les separateurs apres le bloc else
@@ -94,6 +129,7 @@ ASTNode *parser_if(token **current) // parser pour l'instruction IF
         else
             break; // Token inattendu : sortie de la boucle
     }
+
     return node;
 }
 
@@ -108,7 +144,7 @@ ASTNode *parser_for(token **current)
     if (!*current || (*current)->type != TOK_WORDS)
     {
         fprintf(stderr, "for: expected variable name\n");
-        error = 1;
+        error = 2;
         return NULL;
     }
 
@@ -175,7 +211,7 @@ ASTNode *parser_for(token **current)
     return node;
 
 error:
-    error = 1;
+    error = 2;
     free_ast(node);
     return NULL;
 }
@@ -192,14 +228,14 @@ ASTNode *parser_while(token **current)
     ASTNode *condition = parser_logique(current);
     if (!condition)
     {
-        error = 1;
+        error = 2;
         return NULL;
     }
 
     if (!skip_semicolons_et_retour_a_la_ligne(current))
     {
         free_ast(condition);
-        error = 1;
+        error = 2;
         return NULL;
     }
 
@@ -208,7 +244,7 @@ ASTNode *parser_while(token **current)
     {
         fprintf(stderr, "%s: expected do\n", is_until ? "until" : "while");
         free_ast(condition);
-        error = 1;
+        error = 2;
         return NULL;
     }
 
@@ -219,7 +255,7 @@ ASTNode *parser_while(token **current)
     {
         fprintf(stderr, "%s: invalid body\n", is_until ? "until" : "while");
         free_ast(condition);
-        error = 1;
+        error = 2;
         return NULL;
     }
 
@@ -229,7 +265,7 @@ ASTNode *parser_while(token **current)
         fprintf(stderr, "%s: expected done\n", is_until ? "until" : "while");
         free_ast(condition);
         free_ast(body);
-        error = 1;
+        error = 2;
         return NULL;
     }
 

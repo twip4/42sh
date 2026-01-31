@@ -23,6 +23,7 @@ typedef struct ShellState
     int is_subshell;
     loop_control ctrl;
     int in_loop;
+    int exit_code; //(0=ok, 2=syntax error)
 } ShellState;
 
 #endif // COMMON_H

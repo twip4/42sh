@@ -10,7 +10,7 @@
 #include "include/lexer/lexer.h"
 #include "include/parser/parser.h"
 
-ShellState g_shell = { 0, 1, NULL, NULL, NULL, 0, 0, 0, CTRL_NONE, 0 };
+ShellState g_shell = { 0, 1, NULL, NULL, NULL, 0, 0, 0, CTRL_NONE, 0 ,0};
 
 FILE *get_input(int argc, char *argv[])
 {
@@ -67,6 +67,7 @@ int execution_chain(char *line)
 error:
     token_free_all(tokens);
     clear_garbage();
+    g_shell.exit_code = 2; //code sortie erreur syntax
     return 0;
 }
 
@@ -113,7 +114,10 @@ int main(int argc, char *argv[])
 {
     FILE *input = get_input(argc, argv);
     if (!input)
+     {
+        g_shell.exit_code = 2;  // MODIFIÉ: code de sortie 2 pour erreur d'argument
         goto error;
+    }
 
     if (input == stdin)
         shell_loop(input);
@@ -128,5 +132,5 @@ int main(int argc, char *argv[])
 error:
     fprintf(stderr, "error\n");
     clear_garbage();
-    return 0;
+    return g_shell.exit_code;
 }

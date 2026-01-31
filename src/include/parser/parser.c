@@ -124,6 +124,7 @@ ASTNode *parser_bracket_condition(token **current)
     {
         fprintf(stderr, "syntax error: expected ']'\n");
         free_ast(node);
+        error = 2;
         return NULL;
     }
 
@@ -144,7 +145,7 @@ ASTNode *parser_logique(token **current)
 {
     ASTNode *left = parser_pipe(current);
     if (!left)
-        error = 1;
+        error = 2;
 
     while (*current
            && ((*current)->type == TOK_AND || (*current)->type == TOK_OR))
@@ -154,7 +155,7 @@ ASTNode *parser_logique(token **current)
 
         ASTNode *right = parser_pipe(current);
         if (!right)
-            error = 1;
+            error = 2;
 
         ASTNode *node = new_node();
         node->type = (tmp == TOK_AND) ? AST_AND : AST_OR;
@@ -176,7 +177,7 @@ ASTNode *parser_pipe(token **current)
 {
     ASTNode *left = parser_redirect(current);
     if (!left)
-        error = 1;
+        error = 2;
 
     while (*current && (*current)->type == TOK_PIPE)
     {
@@ -184,7 +185,7 @@ ASTNode *parser_pipe(token **current)
 
         ASTNode *right = parser_redirect(current);
         if (!right)
-            error = 1;
+            error = 2;
 
         ASTNode *node = new_node();
         node->type = AST_PIPE;
@@ -218,6 +219,7 @@ ASTNode *parser_redirect(token **current)
         if (!*current || (*current)->type != TOK_WORDS)
         {
             fprintf(stderr, "pas de filename\n");
+            error = 2;
             return next;
         }
         // Création du node AST_REDIRECT
@@ -252,11 +254,11 @@ ASTNode *parser_subshell(token **current)
             || !node->data.subshell.child) // Vérifie la parenthèse fermante
         {
             fprintf(stderr, "error not close parenthese\n");
-            error = 1;
+            error = 2;
         }
 
         if (!node->data.subshell.child)
-            error = 1;
+            error = 2;
 
         *current = (*current)->next; // Consomme ')'
         return node;
